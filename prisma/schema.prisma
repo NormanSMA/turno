@@ -1,0 +1,493 @@
+// TURNO — modelo de datos
+//
+// Dos decisiones transversales:
+//  1. TODA marca de tiempo es `timestamptz`. El análisis del Capítulo V compara
+//     instantes (listoEn - creadoEn, retiradoEn - inicioFranja); un `timestamp`
+//     sin zona produce números plausibles y equivocados, y el error es silencioso.
+//     Se almacena en UTC y se presenta en America/Managua (§16 de la auditoría).
+//  2. Los campos de instrumentación (§12 del documento maestro) están en el modelo
+//     desde el diseño: sin ellos no se puede escribir el Capítulo V.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CondicionExperimental {
+  A // elección libre
+  B // sugerencia activa
+}
+
+/// Estado OPERACIONAL del pedido. Distinto del resultado de servicio
+/// (`cumplimiento`): un pedido puede estar EN_PREPARACION y ya estar incumplido.
+enum EstadoPedido {
+  RECIBIDO
+  EN_PREPARACION
+  LISTO
+  RETIRADO
+  NO_SHOW
+  CANCELADO
+}
+
+/// Resultado de servicio respecto de la promesa — indicador 2 (§14.5).
+enum Cumplimiento {
+  PENDIENTE
+  CUMPLIDO
+  INCUMPLIDO
+  NO_APLICA // cancelado antes de que la promesa venciera
+}
+
+enum RolUsuario {
+  ESTUDIANTE
+  COMERCIO
+  ADMIN
+}
+
+enum EstadoOperacion {
+  ABIERTO
+  PAUSADO
+  CERRADO
+}
+
+/// Por qué el pedido quedó en la franja en que quedó. Auditoría del asignador.
+enum MotivoAsignacion {
+  SOLICITADA_POR_USUARIO
+  SUGERIDA_ACEPTADA
+  ALTERNATIVA_ACEPTADA
+}
+
+model Usuario {
+  id                     String                @id @default(uuid()) @db.Uuid
+  correo                 String                @unique
+  /// Nombre real, opcional. Sin él la interfaz saluda sin nombre: derivarlo del
+  /// correo producía "Angarciam" para Adriana García Mayorga.
+  nombre                 String?
+  rol                    RolUsuario            @default(ESTUDIANTE)
+  /// Solo para cuentas de operación (COMERCIO / ADMIN). Un ESTUDIANTE entra por
+  /// enlace mágico y este campo queda null: no hay contraseña que robar.
+  passwordHash           String?
+  /// Marca un acceso con contraseña inicial: la interfaz obliga a cambiarla.
+  debeCambiarPassword    Boolean               @default(false)
+  ultimoAccesoEn         DateTime?             @db.Timestamptz(3)
+  facultad               String?
+  carrera                String?
+  anio                   Int?
+  frecuenciaCompraPrevia String?
+  condicionExperimental  CondicionExperimental
+  consentimiento         Boolean               @default(false)
+  enListaEspera          Boolean               @default(false)
+  canalCaptacion         String?
+  comercioId             String?               @db.Uuid
+  comercio               Comercio?             @relation(fields: [comercioId], references: [id])
+  creadoEn               DateTime              @default(now()) @db.Timestamptz(3)
+  primerPedidoEn         DateTime?             @db.Timestamptz(3)
+  pedidos                Pedido[]
+  sesiones               Sesion[]
+  tokens                 TokenAcceso[]
+  auditoria              AuditoriaAdmin[]
+  respuestas             Respuesta[]
+  suscripcionesPush      SuscripcionPush[]
+  favoritos              Favorito[]
+  preferenciasAviso      PreferenciaAviso?
+
+  @@map("usuario")
+}
+
+model Sesion {
+  id         String    @id @default(uuid()) @db.Uuid
+  usuarioId  String    @db.Uuid
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  /// Solo el hash. El token en claro nunca toca la base ni los logs.
+  tokenHash  String    @unique
+  expiraEn   DateTime  @db.Timestamptz(3)
+  revocadaEn DateTime? @db.Timestamptz(3)
+  creadaEn   DateTime  @default(now()) @db.Timestamptz(3)
+  userAgent  String?
+
+  @@index([usuarioId])
+  @@map("sesion")
+}
+
+/// Enlace mágico: token de un solo uso, expiración corta (§11.2)
+model TokenAcceso {
+  id        String    @id @default(uuid()) @db.Uuid
+  usuarioId String    @db.Uuid
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiraEn  DateTime  @db.Timestamptz(3)
+  usadoEn   DateTime? @db.Timestamptz(3)
+  creadoEn  DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([usuarioId])
+  @@map("token_acceso")
+}
+
+/// Ventana de conteo para limitar abuso (envío de enlaces mágicos, creación de
+/// pedidos). Se persiste porque en serverless no hay memoria compartida entre
+/// instancias: un contador en RAM no limita nada.
+model ContadorLimite {
+  clave      String   @id
+  ventanaEn  DateTime @db.Timestamptz(3)
+  conteo     Int      @default(0)
+
+  @@index([ventanaEn])
+  @@map("contador_limite")
+}
+
+model Comercio {
+  id              String          @id @default(uuid()) @db.Uuid
+  nombre          String
+  slug            String          @unique
+  /// Dónde queda físicamente. No es decorativo: el estudiante decide con esto.
+  /// Un pedido listo en un edificio al que no llega en su receso es un no-show
+  /// que el sistema provocó, y el dato que lo evita es una línea de texto.
+  ubicacion       String?
+  personalCocina  Int             @default(1)
+  /// Δ — ancho de franja en minutos (variable experimental)
+  anchoFranjaMin  Int             @default(10)
+  /// α — factor de seguridad, se calibra empíricamente (§6.2)
+  factorSeguridad Decimal         @default(0.85) @db.Decimal(4, 3)
+  /// t_mín — umbral de elegibilidad para pedido anticipado (§6.3)
+  tiempoMinAnticipable Int        @default(3)
+  /// Margen sobre el cut-off: minutos de colchón además de t(p) máximo del pedido
+  margenCutoffMin Int             @default(2)
+  /// Minutos tras `listoEn` sin retiro para declarar NO_SHOW
+  minutosNoShow   Int             @default(20)
+  /// Tope de pedidos activos por usuario — evita monopolizar franjas
+  maxPedidosActivos Int           @default(2)
+  estadoOperacion EstadoOperacion @default(ABIERTO)
+  activo          Boolean         @default(true)
+  creadoEn        DateTime        @default(now()) @db.Timestamptz(3)
+  productos       Producto[]
+  franjas         Franja[]
+  usuarios        Usuario[]
+
+  @@map("comercio")
+}
+
+/// Un producto marcado como favorito por un estudiante.
+///
+/// Vive en la base y no en el teléfono a propósito: alguien que marca sus
+/// favoritos en la computadora de la biblioteca espera encontrarlos en su
+/// celular. Una preferencia que no sigue a la persona no es una preferencia,
+/// es una configuración de navegador.
+model Favorito {
+  usuarioId  String   @db.Uuid
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  productoId String   @db.Uuid
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  creadoEn   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@id([usuarioId, productoId])
+  @@index([usuarioId])
+  @@map("favorito")
+}
+
+/// Qué avisos quiere recibir cada estudiante.
+///
+/// La fila solo existe cuando alguien cambió algo: la ausencia significa "todo
+/// activado", que es el comportamiento por defecto. Así no hay que crear una
+/// fila por cada usuario que nunca abrió esta pantalla.
+///
+/// `sistema` no se puede apagar desde la interfaz y por eso no está acá: un
+/// aviso de "tu comercio dejó de recibir pedidos" no es una preferencia, es
+/// información que el estudiante necesita para no ir en vano.
+model PreferenciaAviso {
+  usuarioId    String   @id @db.Uuid
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  confirmacion Boolean  @default(true)
+  listo        Boolean  @default(true)
+  recordatorio Boolean  @default(true)
+  promociones  Boolean  @default(false)
+  actualizadoEn DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("preferencia_aviso")
+}
+
+model Producto {
+  id                   String       @id @default(uuid()) @db.Uuid
+  comercioId           String       @db.Uuid
+  comercio             Comercio     @relation(fields: [comercioId], references: [id], onDelete: Cascade)
+  nombre               String
+  descripcion          String?
+  /// Foto del producto. Opcional: si falta, la interfaz dibuja un mosaico
+  /// derivado del nombre en vez de dejar un hueco gris.
+  imagenUrl            String?
+  precio               Decimal      @db.Decimal(10, 2)
+  /// t(p) medido con cronómetro sobre preparación real
+  tiempoPreparacionMin Int
+  /// t(p) >= t_min, marcado por el comercio
+  anticipable          Boolean      @default(false)
+  /// El comercio lo apaga cuando se agota. No es inventario: es un interruptor.
+  disponible           Boolean      @default(true)
+  archivado            Boolean      @default(false)
+  items                ItemPedido[]
+  foto                 FotoProducto?
+  favoritos            Favorito[]
+
+  @@index([comercioId])
+  @@map("producto")
+}
+
+/// Foto del producto, subida por el comercio.
+///
+/// En TABLA APARTE y no como columna de `Producto`, y eso importa: una columna
+/// `Bytes` viajaría en cada `findMany` del menú, así que pedir el catálogo
+/// arrastraría todas las fotos aunque nadie las mire. Acá solo las lee la ruta
+/// que las sirve.
+///
+/// Se guardan en la base y no en el disco ni en un servicio externo, por el
+/// ADR-18: el despliegue es serverless —el sistema de archivos es efímero— y
+/// sumar un bucket sería una dependencia y una factura más. Un catálogo de
+/// campus son decenas de fotos de ~40 KB en WebP; caben de sobra en el plan
+/// gratuito.
+model FotoProducto {
+  id         String   @id @default(uuid()) @db.Uuid
+  productoId String   @unique @db.Uuid
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  /// Los bytes de la imagen, ya convertida y comprimida por el navegador.
+  datos      Bytes
+  tipo       String   @default("image/webp")
+  ancho      Int
+  alto       Int
+  bytes      Int
+  creadaEn   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@map("foto_producto")
+}
+
+model Franja {
+  id               String   @id @default(uuid()) @db.Uuid
+  comercioId       String   @db.Uuid
+  comercio         Comercio @relation(fields: [comercioId], references: [id], onDelete: Cascade)
+  inicio           DateTime @db.Timestamptz(3)
+  fin              DateTime @db.Timestamptz(3)
+  /// C(f) — minutos-cocina disponibles en la franja
+  capacidadMinutos Int
+  /// carga acumulada admitida, en minutos-cocina. Invariante: <= alfa * C(f)
+  cargaAsignada    Int      @default(0)
+  abierta          Boolean  @default(true)
+  pedidos          Pedido[]
+
+  @@unique([comercioId, inicio])
+  /// El @@index([comercioId, inicio]) que estaba acá era redundante: el
+  /// @@unique de arriba ya crea exactamente ese índice, con las mismas columnas
+  /// en el mismo orden. Postgres mantenía los dos en cada alta de franja.
+  @@map("franja")
+}
+
+model Pedido {
+  id                    String                @id @default(uuid()) @db.Uuid
+  codigo                String                @unique
+  usuarioId             String                @db.Uuid
+  usuario               Usuario               @relation(fields: [usuarioId], references: [id])
+  franjaId              String                @db.Uuid
+  franja                Franja                @relation(fields: [franjaId], references: [id])
+  condicionExperimental CondicionExperimental
+  /// Clave de reintento del cliente: dos POST con la misma clave = un pedido.
+  idempotencyKey        String                @unique
+  /// instrumentación (§12)
+  franjaSolicitadaId    String?               @db.Uuid
+  franjasOfrecidas      Json?
+  motivoAsignacion      MotivoAsignacion      @default(SOLICITADA_POR_USUARIO)
+  cargaEstimadaMin      Int
+  estado                EstadoPedido          @default(RECIBIDO)
+  cumplimiento          Cumplimiento          @default(PENDIENTE)
+  total                 Decimal               @db.Decimal(10, 2)
+  creadoEn              DateTime              @default(now()) @db.Timestamptz(3)
+  actualizadoEn         DateTime              @updatedAt @db.Timestamptz(3)
+  listoEn               DateTime?             @db.Timestamptz(3)
+  retiradoEn            DateTime?             @db.Timestamptz(3)
+  canceladoEn           DateTime?             @db.Timestamptz(3)
+  /// true si la cancelación ya devolvió la carga a la franja. Guarda contra la
+  /// doble liberación: sobreventa por la puerta de atrás.
+  capacidadLiberada     Boolean               @default(false)
+  canalCaptacion        String?
+  items                 ItemPedido[]
+  eventos               EventoPedido[]
+  notificaciones        Notificacion[]
+  respuestas            Respuesta[]
+
+  /// Reemplaza a `@@index([franjaId])`, que era su prefijo: este índice sirve
+  /// todo lo que servía aquel y además la cola de cocina, que es la consulta
+  /// más caliente del sistema —cada pantalla la sondea cada 5 s (ADR-05)—.
+  ///
+  /// Se midió con EXPLAIN sobre la base demo antes de decidir, y el resultado
+  /// corrigió la idea inicial: a 1368 pedidos el planificador prefiere el
+  /// recorrido secuencial, así que **agregar** un índice no aceleraba nada y
+  /// solo sumaba trabajo en cada alta. Lo que sí corresponde es que haya UNO
+  /// en vez de dos, con la columna de estado incluida para cuando la tabla
+  /// crezca lo suficiente como para que el índice gane.
+  @@index([franjaId, estado])
+  @@index([usuarioId, estado])
+  @@index([creadoEn])
+  @@map("pedido")
+}
+
+model ItemPedido {
+  id                   String   @id @default(uuid()) @db.Uuid
+  pedidoId             String   @db.Uuid
+  pedido               Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  productoId           String   @db.Uuid
+  producto             Producto @relation(fields: [productoId], references: [id])
+  cantidad             Int
+  /// Snapshot al momento del pedido: el catálogo cambia, el histórico no.
+  nombreProducto       String
+  precioUnitario       Decimal  @db.Decimal(10, 2)
+  tiempoPreparacionMin Int
+  subtotal             Decimal  @db.Decimal(10, 2)
+
+  @@index([pedidoId])
+  @@map("item_pedido")
+}
+
+/// Línea de tiempo del pedido. Permite reconstruir Wq y Ws por pedido.
+model EventoPedido {
+  id        String       @id @default(uuid()) @db.Uuid
+  pedidoId  String       @db.Uuid
+  pedido    Pedido       @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  estado    EstadoPedido
+  timestamp DateTime     @default(now()) @db.Timestamptz(3)
+  actorId   String?      @db.Uuid
+  nota      String?
+
+  @@index([pedidoId])
+  @@map("evento_pedido")
+}
+
+/// Por dónde se entrega un aviso. Un mismo hecho ("tu pedido está listo") se
+/// entrega por los dos canales: el push llega al bolsillo con todo cerrado, el
+/// correo es el respaldo para quien no instaló la aplicación o negó el permiso.
+enum CanalNotificacion {
+  CORREO
+  PUSH
+}
+
+enum TipoNotificacion {
+  PEDIDO_CONFIRMADO
+  PEDIDO_LISTO
+  ENLACE_ACCESO
+}
+
+enum EstadoNotificacion {
+  PENDIENTE
+  ENVIADA
+  FALLIDA
+}
+
+/// Bandeja de salida. La creación del pedido NO puede depender de que el correo
+/// salga: la transacción confirma, la notificación se entrega después y se
+/// reintenta. Consistencia eventual, no ACID distribuido (§13 de la auditoría).
+model Notificacion {
+  id           String             @id @default(uuid()) @db.Uuid
+  pedidoId     String?            @db.Uuid
+  pedido       Pedido?            @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  /// Correo del usuario para CORREO; para PUSH se resuelve la suscripción en
+  /// el momento del envío, porque un teléfono puede desuscribirse entre que se
+  /// encola el aviso y se entrega.
+  destinatario String
+  tipo         TipoNotificacion
+  canal        CanalNotificacion  @default(CORREO)
+  estado       EstadoNotificacion @default(PENDIENTE)
+  intentos     Int                @default(0)
+  ultimoError  String?
+  creadaEn     DateTime           @default(now()) @db.Timestamptz(3)
+  enviadaEn    DateTime?          @db.Timestamptz(3)
+  /// Cuándo el usuario vio este aviso EN LA APLICACIÓN. Es distinto de
+  /// `enviadaEn`, que dice cuándo salió por su canal: un push entregado a un
+  /// teléfono bloqueado está enviado y no leído. La bandeja de la aplicación
+  /// se ordena por este campo, y el contador rojo cuenta los que son null.
+  leidaEn      DateTime?          @db.Timestamptz(3)
+  payload      Json?
+
+  /// Un pedido genera como máximo una notificación de cada tipo POR CANAL: el
+  /// reintento no duplica el aviso, pero el correo y el push son dos entregas
+  /// distintas del mismo hecho y cada una lleva su propio estado.
+  @@unique([pedidoId, tipo, canal])
+  @@index([estado, canal, creadaEn])
+  /// La bandeja pide "los no leídos de este usuario, los más nuevos primero".
+  @@index([leidaEn, creadaEn])
+  @@map("notificacion")
+}
+
+/// Suscripción de un dispositivo a Web Push (RFC 8030 / 8291).
+///
+/// Es POR DISPOSITIVO, no por usuario: la misma persona puede tener el teléfono
+/// y la tablet, y el aviso tiene que llegar a los dos. `endpoint` es único
+/// globalmente porque lo emite el servicio de push del navegador.
+///
+/// No se guarda nada que permita leer el contenido de un aviso ya entregado:
+/// `p256dh` y `auth` son las claves con las que ESTE servidor cifra hacia ese
+/// dispositivo, no credenciales del usuario.
+model SuscripcionPush {
+  id          String    @id @default(uuid()) @db.Uuid
+  usuarioId   String    @db.Uuid
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  endpoint    String    @unique
+  /// Clave pública del cliente para el cifrado del payload.
+  p256dh      String
+  /// Secreto de autenticación del cliente.
+  auth        String
+  userAgent   String?
+  creadaEn    DateTime  @default(now()) @db.Timestamptz(3)
+  ultimoEnvioEn DateTime? @db.Timestamptz(3)
+  /// Fallos consecutivos. Un 404/410 del servicio de push la borra de una; los
+  /// fallos temporales se cuentan y a las cinco se descarta el dispositivo.
+  fallos      Int       @default(0)
+
+  @@index([usuarioId])
+  @@map("suscripcion_push")
+}
+
+enum TipoRespuesta {
+  /// Micro-encuesta tras el retiro: una pregunta, tres segundos (§14.6).
+  MICRO
+  /// System Usability Scale completo, al cierre del piloto.
+  SUS
+}
+
+/// Respuestas de los instrumentos de evaluación (§13.1, §14.6).
+///
+/// El momento de la micro-encuesta es DESPUÉS de confirmar el retiro, nunca
+/// durante el pedido: preguntar en medio del flujo mete fricción en lo que se
+/// está midiendo y contamina el propio dato de usabilidad.
+model Respuesta {
+  id        String         @id @default(uuid()) @db.Uuid
+  usuarioId String         @db.Uuid
+  usuario   Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  /// Solo para la micro-encuesta: a qué pedido se refiere.
+  pedidoId  String?        @db.Uuid
+  pedido    Pedido?        @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  tipo      TipoRespuesta
+  /// Identificador de la pregunta (micro) o "sus".
+  pregunta  String
+  /// Respuestas crudas. En SUS, los diez ítems de 1 a 5.
+  valores   Json
+  creadaEn  DateTime       @default(now()) @db.Timestamptz(3)
+
+  /// Una micro-respuesta por pedido: preguntar dos veces por lo mismo sesga.
+  @@unique([pedidoId, tipo])
+  @@index([usuarioId])
+  @@map("respuesta")
+}
+
+/// Auditoría administrativa: quién, qué, cuándo. Distinta del historial del
+/// pedido — registra decisiones sobre la configuración, no sobre un pedido.
+model AuditoriaAdmin {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  actor      Usuario? @relation(fields: [actorId], references: [id])
+  accion     String
+  entidad    String
+  entidadId  String?
+  antes      Json?
+  despues    Json?
+  timestamp  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([timestamp])
+  @@map("auditoria_admin")
+}

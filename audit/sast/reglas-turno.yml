@@ -1,0 +1,129 @@
+# Reglas semgrep propias de TURNO.
+#
+# Los paquetes genéricos (p/typescript, p/react, p/nodejs, p/owasp-top-ten,
+# p/secrets — 598 reglas) dieron CERO hallazgos. Eso está bien, pero también
+# quiere decir que no dicen nada sobre este proyecto: ninguna de esas reglas
+# conoce el motor de admisión, la regla del reloj inyectado ni la de los emojis.
+#
+# Estas sí. Cada una nace de un bug que ya ocurrió acá y está documentado en
+# hallazgos.md — la idea es que el mismo bug no pueda volver en silencio.
+#
+# La primera versión de este archivo produjo 10 hallazgos y los 10 eran falsos
+# positivos suyos. Están corregidos abajo, y vale la pena decir por qué: una
+# regla que grita en vano se desactiva, y una regla desactivada es peor que
+# ninguna, porque figura en el informe como si estuviera cuidando algo.
+
+rules:
+  # --- Hallazgo: "CSV sin escapar: el export mentía en silencio" ------------
+  - id: turno-csv-sin-serializar
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      Unir campos con join(",") sin serializar. Un valor con coma corre las
+      columnas y el archivo abre bien: no falla, miente. Todo lo que salga
+      hacia afuera pasa por core/csv.ts, que escapa según RFC 4180.
+    paths:
+      exclude:
+        - "**/src/core/csv.ts"
+        - "**/tests/**"
+    pattern-either:
+      - pattern: $X.join(",")
+      - pattern: $X.map(...).join(",")
+
+  # --- Regla de arquitectura: el núcleo es puro y recibe el reloj ----------
+  # Es lo que permite probar la admisión sin levantar nada, y lo que hace que
+  # el simulador reutilice el módulo real en vez de reimplementarlo.
+  #
+  # OJO con lo que NO es violación: `ahora = new Date()` como valor por defecto
+  # de un parámetro, y `solicitud.ahora ?? new Date()`, son *el patrón correcto*
+  # — el llamador puede sobrescribir el reloj y las pruebas lo hacen. La versión
+  # anterior de esta regla marcaba esos cinco sitios y estaba equivocada.
+  # Lo que sí es violación es leer el reloj a media función, donde nadie puede
+  # inyectarlo.
+  - id: turno-nucleo-sin-reloj-propio
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      src/core/ no puede leer el reloj a media función: lo recibe por parámetro
+      (`ahora`), con valor por defecto si hace falta. Así la función es
+      determinista y tanto las pruebas como el simulador pueden controlarla.
+    paths:
+      include:
+        - "**/src/core/**"
+      exclude:
+        # Genera identificadores y sellos de expiración, no decide admisión.
+        - "**/src/core/identidad.ts"
+    patterns:
+      - pattern-either:
+          - pattern: Date.now()
+          - pattern: new Date()
+      # No es violación: el reloj inyectable con respaldo.
+      - pattern-not-inside: $X ?? new Date()
+      - pattern-not-inside: $X ?? Date.now()
+      # No es violación: el valor por defecto de un parámetro.
+      - pattern-not-inside: function $F(..., $A = new Date(), ...) { ... }
+      - pattern-not-inside: function $F(..., { ..., $A = new Date(), ... }, ...) { ... }
+      - pattern-not-inside: ($A = new Date()) => { ... }
+
+  # --- Regla de producto de Norman: nunca emojis --------------------------
+  #
+  # El rango 2600–27BF NO va: ahí viven ✕ ✓ ✗, que son marcas tipográficas y
+  # son exactamente el lenguaje que el Design System pide. Marcarlas hacía que
+  # la regla acusara al código de cumplir la regla.
+  - id: turno-sin-emojis
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      Regla de producto: nunca emojis. El lenguaje de estados es tipográfico
+      (ver IconoEstado y el Design System).
+    paths:
+      exclude:
+        - "**/tests/**"
+    pattern-regex: '[\x{1F000}-\x{1FAFF}]|\x{FE0F}'
+
+  # --- Hallazgo 7: redirección abierta en el enlace mágico ----------------
+  #
+  # En modo taint, porque el bug no es leer `volver` —eso hay que hacerlo— sino
+  # NAVEGAR a él sin haberlo validado. La versión con `pattern` marcaba las dos
+  # lecturas legítimas, incluida una que tenía el saneador en la misma línea.
+  - id: turno-volver-sin-validar
+    languages: [typescript]
+    severity: ERROR
+    mode: taint
+    message: >-
+      Destino de navegación tomado de la URL sin pasar por esRutaSegura() /
+      rutaSegura() de core/rutas.ts. Es la redirección abierta del hallazgo 7, y
+      duele más de lo habitual porque el enlace llega por correo, que es donde
+      la gente está entrenada para hacer clic.
+    paths:
+      exclude:
+        - "**/src/core/rutas.ts"
+        - "**/tests/**"
+    pattern-sources:
+      - pattern: $P.get("volver")
+      - pattern: $P.searchParams.get("volver")
+    pattern-sanitizers:
+      - pattern: rutaSegura(...)
+      - pattern: esRutaSegura(...)
+      - pattern: "$C ? $A : $B"
+    pattern-sinks:
+      - pattern: $R.push($X)
+      - pattern: $R.replace($X)
+      - pattern: redirect($X)
+      - pattern: "<a href={$X}>...</a>"
+
+  # --- Hallazgos T-13 y T-14: la idempotencia mira dueño y cuerpo ---------
+  - id: turno-idempotencia-sin-comprobar
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Devolver el pedido hallado por idempotencyKey sin pasar por
+      resolverReintento() es T-13/T-14: entrega un código de retiro que puede no
+      corresponder al pedido pedido, o ser de otra persona.
+    paths:
+      include:
+        - "**/src/**"
+    pattern: |
+      $P = await $DB.pedido.findUnique({ where: { idempotencyKey: $K, ... }, ... })
+      ...
+      return aPedidoAdmitido($P)

@@ -1,0 +1,781 @@
+@import "tailwindcss";
+
+/*
+ * TURNO — Design System v1.0
+ *
+ * "No estamos diseñando una página web para pedir comida. Estamos diseñando una
+ *  experiencia para que un estudiante pueda pedir su comida antes del receso y
+ *  recogerla sin hacer fila."
+ *
+ * De esa frase salen todas las decisiones de acá: la velocidad importa más que
+ * la decoración, la claridad más que la cantidad de información, el estado del
+ * pedido más que una animación bonita, y el móvil más que el escritorio.
+ *
+ * Estética: Soft UI + Food Photography + Bold Accent. La comida es la
+ * protagonista; el sistema no compite con ella.
+ *
+ * REGLA DE PROPORCIÓN — 80% neutrales / 15% superficies / 5% color de acción.
+ * El rojo destaca porque es escaso. Una pantalla con rojo, verde, amarillo y
+ * naranja a la vez no tiene acento: tiene ruido.
+ *
+ * NUNCA se usan emojis en la interfaz. Los iconos salen de una sola familia,
+ * dibujados a 24x24 con trazo 1.75 (`src/components/iconos.tsx`).
+ *
+ * La documentación completa vive en `docs/design-system.md`.
+ */
+
+@theme {
+  /* ==================================================================
+     MARCA
+     Rojo: botones primarios, navegación activa, CTA, selección. Nunca como
+     superficie grande ni como color de texto largo.
+
+     Son DOS tokens porque el rojo hace dos trabajos con exigencias opuestas
+     de contraste: relleno con texto blanco encima, y tipografía sobre el
+     fondo. En claro coinciden; en oscuro no puede haber un solo valor (T-20,
+     resuelto abajo).
+     ================================================================== */
+  /* Relleno de botón, chip activo, punto de contador. Texto blanco encima. */
+  --color-marca-fondo: #c91525;
+  /* Tipografía, iconos, bordes y subrayados sobre el fondo de la página. */
+  --color-marca-texto: #c91525;
+  /* Obsoleto: alias de `--color-marca-texto`. No usar en código nuevo; queda
+     para que nada se rompa si algún uso se escapó de la migración. */
+  --color-marca: var(--color-marca-texto);
+  --color-marca-fuerte: #a81020;
+  --color-marca-suave: #fdeaec;
+
+  /* Semánticos de estado. Cada uno significa UNA cosa. */
+  /* Estaba en #258a4b: 4.36:1 sobre blanco (pasa) pero 3.77:1 sobre su propio
+     --color-exito-suave, que es donde de verdad se usa —el chip de "abierto"—.
+     #1e7340 da 5.06:1 sobre el suave y 5.86:1 sobre blanco. */
+  --color-exito: #1e7340;
+  --color-exito-suave: #e3f2e8;
+  --color-atencion: #f2b84b;
+  --color-atencion-suave: #fdf3e0;
+  --color-error: #d92d20;
+  --color-error-suave: #fdeae8;
+  --color-aviso: #e49b19;
+
+  /* ==================================================================
+     SUPERFICIES — fondo, superficie, superficie elevada.
+     La profundidad se construye con nivel + borde, no con sombras grandes.
+     ================================================================== */
+  --color-fondo: #f7f7f5;
+  --color-superficie: #ffffff;
+  --color-superficie-2: #f1f2f0;
+  --color-superficie-3: #e9eae7;
+  --color-borde: #e4e4e1;
+
+  /*
+   * Texto: tres niveles y nada más.
+   *
+   * Los tres pasan AA (4.5:1) sobre `--color-superficie`. El tercero estaba en
+   * `#9a9a9a` y daba **2.81:1** —axe lo marcó en la portada y en Mis pedidos,
+   * sobre una etiqueta de 13 px en negrita—. No era decorativo: era texto que
+   * hay que leer. `#757575` da 4.61:1 y sigue siendo visiblemente el más
+   * apagado de los tres.
+   */
+  --color-texto: #171717;  /* 17.93:1 */
+  --color-texto-2: #6b6b6b; /*  5.33:1 */
+  --color-texto-3: #757575; /*  4.61:1 */
+
+  /* ==================================================================
+     ALIAS DE COMPATIBILIDAD
+     El código existente usa los nombres anteriores. Se mantienen apuntando a
+     los tokens nuevos para que el sistema se aplique de una vez, en lugar de
+     dejar media aplicación con la paleta vieja mientras se migra.
+     Código nuevo: usar los nombres semánticos de arriba.
+     ================================================================== */
+  /* `bg-turno` es casi siempre relleno de botón, así que el alias apunta al
+     token de FONDO: es el que mide contraste contra el blanco de encima. Los
+     pocos usos de `text-turno` se migraron a `text-marca-texto`. */
+  --color-turno: var(--color-marca-fondo);
+  --color-turno-vivo: var(--color-marca-fondo);
+  --color-turno-oscuro: var(--color-marca-fuerte);
+  --color-turno-profundo: var(--color-marca-fuerte);
+  --color-turno-claro: var(--color-marca-suave);
+  --color-maiz: var(--color-atencion);
+  --color-brasa: var(--color-aviso);
+  --color-brasa-claro: var(--color-atencion-suave);
+  --color-alerta: var(--color-error);
+  --color-alerta-claro: var(--color-error-suave);
+  --color-verde: var(--color-exito);
+  --color-verde-vivo: var(--color-exito);
+  --color-verde-claro: var(--color-exito-suave);
+  --color-tinta: var(--color-texto);
+  --color-tinta-suave: var(--color-texto-2);
+  --color-tinta-tenue: var(--color-texto-3);
+  --color-papel: var(--color-fondo);
+  --color-papel-alto: var(--color-superficie);
+  --color-papel-medio: var(--color-superficie-2);
+  --color-borde-tenue: var(--color-superficie-3);
+
+  /* Cocina: pantalla fija, a un metro, con calor y prisa. Es el modo oscuro
+     del sistema aplicado a otro contexto, no una paleta aparte. */
+  --color-cocina: #101010;
+  --color-cocina-alto: #181818;
+  --color-cocina-borde: #303030;
+  --color-cocina-tinta: #b7b7b7;
+
+  /* ==================================================================
+     TIPOGRAFIA — una sola familia, contraste fuerte de pesos.
+     Máximo 4 tamaños simultáneos por pantalla.
+     ================================================================== */
+  --font-display: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --text-display: 2.25rem;
+  --text-display--line-height: 1.05;
+  --text-h1: 1.75rem;
+  --text-h1--line-height: 1.15;
+  --text-h2: 1.375rem;
+  --text-h2--line-height: 1.25;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.35;
+  --text-cuerpo: 0.9375rem;
+  --text-cuerpo--line-height: 1.55;
+  --text-chico: 0.8125rem;
+  --text-chico--line-height: 1.45;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.35;
+
+  /* ==================================================================
+     RADIOS — input 12-16 · card 18-24 · modal 24-28 · botón 14-18 · chip full
+     ================================================================== */
+  --radius-xs: 0.5rem;
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+  --radius-2xl: 2rem;
+
+  /* ==================================================================
+     SOMBRAS — muy ligeras. Se usan sm y md; lg solo en modales.
+     Una tarjeta normal funciona con superficie + borde, sin sombra.
+     ================================================================== */
+  --shadow-sm: 0 1px 2px rgba(23, 23, 23, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(23, 23, 23, 0.08);
+  --shadow-lg: 0 12px 32px -8px rgba(23, 23, 23, 0.16);
+
+  /* ==================================================================
+     MOTION — la animación explica, no distrae.
+     ================================================================== */
+  --motion-rapido: 130ms;
+  --motion-normal: 220ms;
+  --motion-lento: 340ms;
+  --ease-salida: cubic-bezier(0.22, 1, 0.28, 1);
+}
+
+/* ====================================================================
+   DARK MODE
+   No es una inversión. Es un sistema propio: el fondo no es negro puro, las
+   superficies suben en pasos, y el rojo se aclara porque el mismo tono sobre
+   fondo oscuro pierde legibilidad.
+   Tres estados: elección explícita clara, elección explícita oscura, y el
+   ajuste del sistema, que no estampa nada en el documento.
+   ==================================================================== */
+:root {
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    --color-fondo: #101010;
+    --color-superficie: #181818;
+    --color-superficie-2: #222222;
+    --color-superficie-3: #2a2a2a;
+    --color-borde: #303030;
+    --color-texto: #ffffff;
+    --color-texto-2: #b7b7b7; /* 8.85:1 sobre superficie */
+    /* Estaba en #777777 y daba 3.97:1: el mismo defecto que en claro, pero
+       nadie lo había medido porque la auditoría de accesibilidad corre en modo
+       claro. #8a8a8a da 5.14:1. */
+    --color-texto-3: #8a8a8a; /* 5.14:1 sobre superficie */
+    /* T-20 RESUELTO: partido en dos.
+       Un solo valor no podía servir para los dos papeles. Medido:
+         #f04352 con blanco encima .. 3.73:1  falla AA
+         #f04352 como texto sobre #181818 .. 4.76:1  pasa
+         #d42d40 con blanco encima .. 4.94:1  pasa
+         #d42d40 como texto sobre #181818 .. 3.59:1  falla
+       Cada token toma el valor que su papel exige. */
+    --color-marca-fondo: #d42d40;
+    --color-marca-texto: #f04352;
+    --color-marca: var(--color-marca-texto);
+    --color-marca-fuerte: #ff6472;
+    --color-marca-suave: #2a1416;
+    --color-exito: #45b672;
+    --color-exito-suave: #12251a;
+    --color-atencion-suave: #2a2216;
+    --color-error: #f0564a;
+    --color-error-suave: #2b1512;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-tema="oscuro"] {
+  --color-fondo: #101010;
+  --color-superficie: #181818;
+  --color-superficie-2: #222222;
+  --color-superficie-3: #2a2a2a;
+  --color-borde: #303030;
+  --color-texto: #ffffff;
+  --color-texto-2: #b7b7b7; /* 8.85:1 sobre superficie */
+  --color-texto-3: #8a8a8a; /* 5.14:1 sobre superficie */
+    /* T-20 RESUELTO: partido en dos.
+       Un solo valor no podía servir para los dos papeles. Medido:
+         #f04352 con blanco encima .. 3.73:1  falla AA
+         #f04352 como texto sobre #181818 .. 4.76:1  pasa
+         #d42d40 con blanco encima .. 4.94:1  pasa
+         #d42d40 como texto sobre #181818 .. 3.59:1  falla
+       Cada token toma el valor que su papel exige. */
+    --color-marca-fondo: #d42d40;
+    --color-marca-texto: #f04352;
+    --color-marca: var(--color-marca-texto);
+  --color-marca-fuerte: #ff6472;
+  --color-marca-suave: #2a1416;
+  --color-exito: #45b672;
+  --color-exito-suave: #12251a;
+  --color-atencion-suave: #2a2216;
+  --color-error: #f0564a;
+  --color-error-suave: #2b1512;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* Zona táctil mínima de 44x44 aunque el icono mida 20-24. Vale para
+   favoritos, cerrar, atrás, sumar, restar, navegación y filtros. */
+.toque {
+  position: relative;
+}
+.toque::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+html,
+body {
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* La hora es un dato, no prosa: siempre en monoespaciada y tabular, para que
+   las columnas de una lista de pedidos no bailen al actualizarse. */
+.hora {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.titulo {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.022em;
+  line-height: 1;
+}
+
+.etiqueta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-tinta-suave);
+}
+
+/* Foco visible siempre: se navega con teclado en el panel y con lector de
+   pantalla en el móvil. Quitarlo sería una regresión de accesibilidad. */
+:focus-visible {
+  outline: 2px solid var(--color-turno);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* --- Movimiento ---------------------------------------------------------
+   Portado de DS.Anim: resortes cortos, nada rebotón. La entrada escalonada
+   ordena la lectura de arriba hacia abajo; no es decoración. */
+
+@keyframes entrada-turno {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.entra {
+  animation: entrada-turno 0.52s cubic-bezier(0.22, 1, 0.28, 1) both;
+}
+
+.entra-1 { animation-delay: 0.05s; }
+.entra-2 { animation-delay: 0.1s; }
+.entra-3 { animation-delay: 0.15s; }
+.entra-4 { animation-delay: 0.2s; }
+
+/* Presión: el equivalente de PressButtonStyle. Da sensación de botón físico sin
+   animar nada al pasar el mouse, que en móvil no existe. */
+.presiona {
+  transition:
+    transform 0.16s cubic-bezier(0.22, 1, 0.28, 1),
+    opacity 0.16s ease;
+}
+
+.presiona:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.86;
+}
+
+/* Resplandor suave bajo el botón principal: SoftGlowModifier. */
+.brillo {
+  box-shadow: 0 10px 18px -8px color-mix(in srgb, var(--color-turno) 45%, transparent);
+}
+
+/* Destello de carga: ShimmerModifier, para los esqueletos. */
+@keyframes destello-turno {
+  from { transform: translateX(-60%); }
+  to { transform: translateX(160%); }
+}
+
+.destello {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-papel-medio);
+}
+
+.destello::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    /* Blanco al 70 % en tema oscuro es un fogonazo sobre `#222`. El brillo
+       sale del propio tema, como ya hace `.esqueleto-brillo`, así que el
+       destello se lee igual en los dos sin dos reglas. */
+    color-mix(in srgb, var(--color-superficie) 70%, transparent),
+    transparent
+  );
+  animation: destello-turno 1.25s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .entra {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- Tarjeta ------------------------------------------------------------
+   GlassCardModifier: superficie elevada, borde de 1px y sombra corta. */
+.tarjeta {
+  background: var(--color-papel-alto);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 14px -10px rgba(7, 19, 22, 0.22);
+}
+
+/* --- La regla de franjas: el elemento firma ------------------------------- */
+
+.regla {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(4.5rem, 1fr);
+  gap: 0.375rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.5rem;
+}
+
+.regla::-webkit-scrollbar {
+  height: 4px;
+}
+
+.regla::-webkit-scrollbar-thumb {
+  background: var(--color-borde);
+  border-radius: 2px;
+}
+
+.franja {
+  scroll-snap-align: start;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 7.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-sm);
+  background: var(--color-papel-alto);
+  overflow: hidden;
+  text-align: left;
+  transition:
+    border-color 140ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.28, 1);
+}
+
+.franja:hover:not(:disabled) {
+  border-color: var(--color-turno);
+}
+
+.franja:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* El relleno ES la carga de cocina comprometida. No es decoración: su altura
+   es cargaAsignada / (alfa * C(f)). Ver la franja llenarse es ver el modelo. */
+.franja-relleno {
+  position: absolute;
+  inset: auto 0 0 0;
+  background: var(--color-turno-claro);
+  transition: height 220ms cubic-bezier(0.22, 1, 0.28, 1);
+  pointer-events: none;
+}
+
+.franja[data-llena="true"] .franja-relleno {
+  background: var(--color-brasa-claro);
+}
+
+.franja[data-elegida="true"] {
+  border-color: var(--color-turno);
+  box-shadow:
+    inset 0 0 0 1px var(--color-turno),
+    0 8px 16px -10px color-mix(in srgb, var(--color-turno) 55%, transparent);
+}
+
+.franja:disabled {
+  cursor: not-allowed;
+  color: var(--color-tinta-suave);
+}
+
+/* Las franjas sin espacio NO se ocultan: se tachan. El estudiante tiene que
+   ver por qué no puede tener las 12:00 — ahí está el aplanamiento. */
+.franja:disabled .franja-hora {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* --- Cocina: modo oscuro, legible a un metro ------------------------------ */
+
+.cocina {
+  background: var(--color-cocina);
+  color: var(--color-papel);
+  min-height: 100vh;
+}
+
+.cocina-tarjeta {
+  background: var(--color-cocina-alto);
+  border: 1px solid var(--color-cocina-borde);
+  border-radius: var(--radius-md);
+}
+
+.cocina-tarjeta[data-urgencia="vencido"] {
+  border-color: var(--color-alerta);
+  background: #35181a;
+}
+
+.cocina-tarjeta[data-urgencia="pronto"] {
+  border-color: var(--color-maiz);
+}
+
+/* --- Trazo que se dibuja --------------------------------------------------
+   Usado en la línea de tiempo del pedido. Un paso completado no aparece: se
+   traza, de arriba hacia abajo, en el mismo sentido en que avanza el pedido.
+   La duración es corta a propósito — es una confirmación, no un espectáculo.
+
+   El conector es una recta, así que un `scaleY` desde el borde superior da el
+   mismo resultado que un `stroke-dasharray` y no necesita SVG. La palomita sí
+   es un trazo curvo y se dibuja con dasharray. */
+
+@keyframes traza-vertical {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+.traza {
+  transform-origin: top;
+  animation: traza-vertical 0.45s cubic-bezier(0.22, 1, 0.28, 1) both;
+}
+
+@keyframes traza-palomita {
+  from { stroke-dashoffset: 24; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.traza-palomita {
+  stroke-dasharray: 24;
+  animation: traza-palomita 0.4s cubic-bezier(0.22, 1, 0.28, 1) 0.12s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .traza { transform: none; }
+  .traza-palomita { stroke-dashoffset: 0; }
+}
+
+/* La transición de vista de la cocina: la tarjeta viaja entre columnas.
+   Sin esto el navegador aplica su cruce de disolvencia por omisión, que en un
+   tablero de tres columnas se lee como parpadeo. */
+::view-transition-group(*) {
+  animation-duration: 0.42s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.28, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   MOTION SYSTEM — CSS
+   Las duraciones salen de los tokens. Todo lo de acá degrada a nada con
+   `prefers-reduced-motion`, en el bloque del final del archivo.
+   ========================================================================== */
+
+/* --- Transiciones compartidas entre vistas -------------------------------
+   La foto de una tarjeta se convierte en la foto del detalle en vez de
+   desaparecer y volver a aparecer. Es el equivalente nativo de `layoutId` y
+   cuesta cero kilobytes (ADR-19). */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--motion-normal);
+  animation-timing-function: var(--ease-salida);
+}
+
+/* --- Hoja inferior -------------------------------------------------------
+   En móvil, filtros, cantidades y confirmaciones entran desde abajo en vez de
+   abrir una pantalla nueva. Refuerza la sensación de aplicación y conserva el
+   contexto detrás. */
+/*
+ * Un `<dialog>` cerrado no se ve, pase lo que pase.
+ *
+ * El navegador le da `display: none` mientras no tenga `[open]`, pero cualquier
+ * utilidad de display en el `className` —`flex`, que estas hojas necesitan para
+ * su cuerpo con desplazamiento— le gana por orden de cascada. El resultado es
+ * una hoja incrustada en medio de la página que además NO se puede cerrar:
+ * nunca se abrió con `showModal()`, así que `close()` no hace nada y el
+ * `onClose` que la desmonta jamás se dispara.
+ *
+ * Pasó de verdad con la hoja de "no podemos preparar este pedido", visible
+ * siempre en el tablero de cocina. `HojaAyuda` tenía el mismo defecto latente.
+ *
+ * Se arregla acá y no en cada componente porque es una trampa de la plataforma:
+ * quien escriba la próxima hoja con `flex` volvería a caer. `dialog:not([open])`
+ * tiene más especificidad que una clase de utilidad y gana siempre.
+ */
+dialog:not([open]) {
+  display: none;
+}
+
+.hoja {
+  animation: hoja-entra var(--motion-lento) var(--ease-salida) both;
+}
+@keyframes hoja-entra {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.hoja::backdrop {
+  background: rgba(23, 23, 23, 0.5);
+  animation: fundido var(--motion-normal) ease-out both;
+}
+@keyframes fundido {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* --- Modal ---------------------------------------------------------------
+   Nunca aparece de golpe: el fondo funde y el panel sube de 0.96 a 1. */
+.modal {
+  animation: modal-entra var(--motion-normal) var(--ease-salida) both;
+}
+@keyframes modal-entra {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* --- Toast ---------------------------------------------------------------
+   Confirma una acción sin interrumpirla. Nunca un modal para decir "listo". */
+.toast {
+  animation: toast-entra var(--motion-normal) var(--ease-salida) both;
+}
+@keyframes toast-entra {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Barra de carrito ----------------------------------------------------
+   Acompaña sin molestar: entra desde abajo cuando hay algo y se va cuando no. */
+.barra-carrito {
+  animation: barra-entra var(--motion-normal) var(--ease-salida) both;
+}
+@keyframes barra-entra {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Esqueleto con brillo ------------------------------------------------
+   El gris plano se lee como algo roto; el brillo lento se lee como algo que
+   viene en camino. Movimiento muy suave a propósito: un destello rápido
+   compite con el contenido que está por aparecer. */
+.esqueleto-brillo {
+  position: relative;
+  overflow: hidden;
+}
+.esqueleto-brillo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-superficie) 70%, transparent),
+    transparent
+  );
+  animation: brillo-esqueleto 1.6s ease-in-out infinite;
+}
+@keyframes brillo-esqueleto {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hoja,
+  .hoja::backdrop,
+  .modal,
+  .toast,
+  .barra-carrito,
+  .esqueleto-brillo::after {
+    animation: none !important;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   COMPROBANTE IMPRESO (ADR-19)
+   El borde dentado es una máscara cónica y el avance son `steps()`. Los pasos
+   discretos son lo que hace que se sienta un motor y no un pase de
+   diapositivas — un desplazamiento continuo lee como animación de web.
+   ========================================================================== */
+
+.recibo {
+  --diente-a: 9px;
+  --diente-w: 15px;
+  width: 91%;
+  background: #fbfaf6;
+  color: #1a1d21;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.62;
+  padding: 1.15rem 1.05rem calc(var(--diente-a) + 0.9rem);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.13);
+  /* Textura de papel térmico: líneas horizontales muy tenues. */
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.022) 0 1px,
+    transparent 1px 4px
+  );
+  -webkit-mask:
+    conic-gradient(from -45deg at bottom, #000 0 90deg, transparent 0) bottom /
+      var(--diente-w) var(--diente-a) repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--diente-a)) no-repeat;
+  mask:
+    conic-gradient(from -45deg at bottom, #000 0 90deg, transparent 0) bottom /
+      var(--diente-w) var(--diente-a) repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--diente-a)) no-repeat;
+}
+
+/* El papel siempre es papel: no se invierte con el tema. Un recibo oscuro no
+   existe, y el contraste interno ya está garantizado por sus propios colores. */
+:root[data-tema="oscuro"] .recibo {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.recibo-saliendo {
+  animation: alimentar-papel 1.9s steps(22, end) both;
+}
+@keyframes alimentar-papel {
+  from {
+    transform: translateY(calc(-100% + 2px));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Franja de "código de barras": decorativa, sin datos. */
+.recibo .barras {
+  height: 26px;
+  opacity: 0.82;
+  background-image: repeating-linear-gradient(
+    90deg,
+    currentColor 0 1px,
+    transparent 1px 3px,
+    currentColor 3px 5px,
+    transparent 5px 6px,
+    currentColor 6px 7px,
+    transparent 7px 10px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recibo-saliendo {
+    animation: none !important;
+  }
+}

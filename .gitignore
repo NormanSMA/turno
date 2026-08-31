@@ -1,0 +1,84 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# TURNO
+.env
+.env.test
+/src/generated
+tsconfig.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Auditoria: SALIDAS, no entradas.
+#
+# La regla es una sola: si un comando lo genera, no se versiona. Lo que se
+# queda es lo que ninguna herramienta puede volver a producir — los informes
+# escritos a mano (REPORT, RESUMEN), las reglas propias de Semgrep con sus
+# casos de prueba, la configuracion de ZAP y las excepciones del linter de
+# Design System, que el codigo lee en tiempo de ejecucion.
+#
+# Versionar las salidas cuesta 17 MB de ruido y produce diffs ilegibles cada
+# vez que alguien corre la suite.
+# ---------------------------------------------------------------------------
+tests.zip
+src.zip
+.stryker-tmp/
+
+audit/arquitectura/
+audit/baseline/
+audit/cobertura/
+audit/cobertura-salida.txt
+audit/deps/
+audit/lighthouse/
+audit/mutacion/
+audit/resumen.json
+audit/visual/
+audit/e2e/artefactos/
+audit/e2e/informe/
+audit/e2e/resultados.json
+
+# De SAST se queda la regla, no el hallazgo.
+audit/sast/semgrep*.json
+audit/sast/semgrep*.txt
+
+# De ZAP se queda la configuracion, no el informe.
+audit/zap/informe.*
+audit/zap/salida.txt

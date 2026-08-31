@@ -1,0 +1,21 @@
+{
+  "name": "TURNO — pedí antes, llegá y retirá",
+  "short_name": "TURNO",
+  "description": "Pedí antes, reservá tu hora de retiro y evitá la fila. TURNO reserva capacidad real de cocina, no solo un pedido.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "es-NI",
+  "background_color": "#f7f7f5",
+  "theme_color": "#171717",
+  "icons": [
+    { "src": "/icon", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/apple-icon", "sizes": "180x180", "type": "image/png" }
+  ],
+  "shortcuts": [
+    { "name": "Mis pedidos", "url": "/mis-pedidos" },
+    { "name": "Explorar", "url": "/explorar" }
+  ]
+}

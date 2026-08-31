@@ -1,0 +1,72 @@
+[
+  {
+    "archivo": "src/lib/correo.ts",
+    "regla": "color-literal",
+    "motivo": "Plantillas de correo HTML. Los clientes de correo no resuelven variables CSS —Outlook ni siquiera resuelve `:root`—, así que el hex literal no es una omisión: es el único mecanismo que funciona. Si estos colores se movieran a tokens, el correo llegaría sin color."
+  },
+  {
+    "archivo": "src/app/icon.tsx",
+    "regla": "color-literal",
+    "motivo": "Lo rasteriza Satori en el servidor para producir un PNG. Ahí no hay documento ni hoja de estilos: una variable CSS no tiene dónde resolverse."
+  },
+  {
+    "archivo": "src/app/apple-icon.tsx",
+    "regla": "color-literal",
+    "motivo": "Misma razón que icon.tsx: se rasteriza en el servidor."
+  },
+  {
+    "archivo": "src/app/icono-marca.ts",
+    "regla": "color-literal",
+    "motivo": "Es la definición del trazo de la marca, y se usa tanto en la interfaz como en el icono rasterizado y en el favicon. Es la FUENTE del color, no un consumidor: acá el literal es el original."
+  },
+  {
+    "archivo": "src/components/marca.tsx",
+    "regla": "color-literal",
+    "motivo": "Degradados del logotipo dentro de un SVG que también se rasteriza. Un `stop-color` con variable no sobrevive a Satori."
+  },
+  {
+    "archivo": "src/app/layout.tsx",
+    "regla": "color-literal",
+    "motivo": "`theme-color` de la barra del navegador. Es una etiqueta meta que lee el sistema operativo, no el motor de CSS: no admite variables."
+  },
+  {
+    "archivo": "src/components/ModoMostrador.tsx",
+    "regla": "color-literal",
+    "motivo": "Este modo NO sigue el tema del usuario, y está explicado en el propio archivo: el mostrador tiene luz de techo y reflejos, y el lector de QR espera módulos oscuros sobre claro. Usar tokens acá fue un error real de esta auditoría — al cambiar dos literales por `--color-texto-3`, en modo oscuro quedaba #8a8a8a sobre el blanco fijo del mostrador: 3.45:1, por debajo de AA. Los literales elegidos contra ese blanco dan 4.61:1."
+  },
+  {
+    "archivo": "src/components/ComparacionReceso.tsx",
+    "regla": "color-literal",
+    "motivo": "Paleta propia y fija, decidida en el punto 20 de esta auditoría. La barra vive sobre una tarjeta oscura en los DOS temas, así que tomar tokens la ataba a la variante oscura —aclarada para leerse SOBRE fondo oscuro— y esa no aguanta texto blanco ENCIMA: axe midió 3.42:1 y 2.33:1. Cada valor está elegido contra el texto que lleva."
+  },
+  {
+    "archivo": "src/components/CodigoPedido.tsx",
+    "regla": "color-literal",
+    "motivo": "Paleta determinista derivada del código de retiro: el mismo código da siempre el mismo color, y eso es lo que hace que dos códigos parecidos se distingan de un vistazo en el mostrador. No es color de tema, es color como dato."
+  },
+  {
+    "archivo": "src/components/ImagenProducto.tsx",
+    "regla": "color-literal",
+    "motivo": "Fondos de reserva por categoría, para cuando un producto no tiene foto. Misma razón que CodigoPedido: el color identifica, no decora, y tiene que ser estable entre temas para que el mismo plato se vea igual siempre."
+  },
+  {
+    "archivo": "src/components/ComprobanteImpreso.tsx",
+    "regla": "color-literal",
+    "motivo": "Imita un recibo de impresora térmica. El papel de un recibo no cambia de color con el tema del teléfono; si lo hiciera, se rompería justamente la metáfora que hace que se entienda de un vistazo."
+  },
+  {
+    "archivo": "src/components/graficos.tsx",
+    "regla": "color-literal",
+    "motivo": "Paleta de datos deliberadamente FUERA de la marca. Un gráfico pintado con el rojo de la marca se lee como alerta, y el rojo de TURNO ya significa otra cosa en toda la aplicación. Se separan a propósito para que el color del gráfico no herede un significado que no tiene."
+  },
+  {
+    "archivo": "src/app/panel/page.tsx",
+    "regla": "color-literal",
+    "motivo": "Misma paleta de datos que graficos.tsx, usada en las series del panel."
+  },
+  {
+    "archivo": "src/components/LineaTiempo.tsx",
+    "regla": "color-literal",
+    "motivo": "Color del trazo de la línea de tiempo del pedido, elegido para leerse sobre las dos superficies de la tarjeta."
+  }
+]

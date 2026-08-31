@@ -1,0 +1,61 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comentario": [
+    "Mutation testing — punto 14 de la auditoría técnica.",
+    "",
+    "Responde la pregunta que la cobertura no responde: la línea se ejecutó,",
+    "pero ¿alguna aserción se habría enterado si estuviera mal? Stryker cambia",
+    "el código a propósito (< por <=, && por ||, borra una condición) y mira si",
+    "alguna prueba se pone roja. Un mutante que sobrevive es una línea cubierta",
+    "que nadie está comprobando.",
+    "",
+    "Se apunta a src/core y no a todo: es el motor de admisión y la máquina de",
+    "estados, o sea donde una condición mal puesta produce una sobreventa o un",
+    "cumplimiento mal medido. Los handlers ya tienen su red en las pruebas de",
+    "API, y mutar componentes de React da mutantes sin significado.",
+    "",
+    "Se excluyen los archivos que no deciden nada: csv, simulador y generados."
+  ],
+  "packageManager": "npm",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.mutacion.config.ts"
+  },
+  "reporters": [
+    "html",
+    "clear-text",
+    "progress",
+    "json"
+  ],
+  "htmlReporter": {
+    "fileName": "audit/mutacion/informe.html"
+  },
+  "jsonReporter": {
+    "fileName": "audit/mutacion/informe.json"
+  },
+  "mutate": [
+    "src/core/admision.ts",
+    "src/core/estados.ts",
+    "src/core/autorizacion.ts",
+    "src/core/revalidar.ts",
+    "src/core/urgencia.ts",
+    "src/core/rutas.ts",
+    "src/core/credenciales.ts",
+    "src/core/cercania.ts",
+    "src/core/franjas.ts",
+    "src/core/habitual.ts",
+    "src/core/carrito-guardado.ts",
+    "src/core/csv.ts",
+    "src/core/version-vieja.ts"
+  ],
+  "concurrency": 4,
+  "timeoutMS": 120000,
+  "disableTypeChecks": true,
+  "coverageAnalysis": "perTest",
+  "thresholds": {
+    "high": 85,
+    "low": 70,
+    "break": null
+  },
+  "cleanTempDir": true
+}

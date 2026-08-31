@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: turno-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: turno
+      POSTGRES_PASSWORD: turno
+      POSTGRES_DB: turno
+    ports:
+      - "55432:5432"
+    volumes:
+      - turno_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U turno -d turno"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  db_test:
+    image: postgres:17-alpine
+    container_name: turno-db-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: turno
+      POSTGRES_PASSWORD: turno
+      POSTGRES_DB: turno_test
+    ports:
+      - "55433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U turno -d turno_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  turno_pgdata:
