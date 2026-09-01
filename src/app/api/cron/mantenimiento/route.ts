@@ -14,7 +14,11 @@
  */
 import { prisma } from "@/lib/db";
 import { barrerVencidos } from "@/core/ciclo-vida";
-import { purgarCredenciales, purgarLimites } from "@/core/limites";
+import {
+  purgarCredenciales,
+  purgarLimites,
+  purgarNotificaciones,
+} from "@/core/limites";
 import { vaciarBandeja } from "@/lib/correo";
 import { vaciarBandejaPush } from "@/lib/push";
 import { fallo, manejarError, ok } from "@/lib/http";
@@ -63,7 +67,18 @@ async function ejecutar(req: Request) {
     const push = await vaciarBandejaPush(prisma);
     const limitesPurgados = await purgarLimites(prisma);
     const credenciales = await purgarCredenciales(prisma);
-    return ok({ ...barrido, correo, push, limitesPurgados, credenciales });
+    // Retención: se van los avisos ya resueltos y viejos, que son operativos.
+    // Los pedidos y sus eventos se quedan — son la evidencia del piloto, y son
+    // justamente lo que más pesa. Ver `purgarNotificaciones`.
+    const avisosPurgados = await purgarNotificaciones(prisma);
+    return ok({
+      ...barrido,
+      correo,
+      push,
+      limitesPurgados,
+      credenciales,
+      avisosPurgados,
+    });
   } catch (e) {
     return manejarError(e);
   }

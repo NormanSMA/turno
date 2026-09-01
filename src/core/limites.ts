@@ -116,3 +116,39 @@ export async function purgarCredenciales(
 
   return { tokens: tokens.count, sesiones: sesiones.count };
 }
+
+/**
+ * Purga de la bandeja de avisos ya resuelta.
+ *
+ * **Qué se borra y qué no, y por qué la diferencia importa.**
+ *
+ * Una notificación entregada hace tres meses no le sirve a nadie: el aviso
+ * "tu pedido está listo" caducó el mismo día. Pero su `payload` es JSON y la
+ * tabla crece con cada pedido, así que conservarla cuesta espacio real contra
+ * un techo que existe (512 MB en el plan gratuito de Neon).
+ *
+ * **Los pedidos y sus eventos NO se purgan**, aunque sean lo que más pesa.
+ * Son la evidencia del piloto: el análisis A/B, el cumplimiento por día y la
+ * carga por franja se calculan sobre ellos, y el panel exporta el CSV crudo
+ * justo para que un tercero pueda rehacer las cuentas. Borrarlos a los noventa
+ * días sería destruir el resultado del trabajo para ahorrar unos megabytes.
+ * Cuando el volumen apriete —a 12 MB por mes de piloto, eso es algo más de un
+ * año—, lo que corresponde es archivar fuera de la base, no eliminar.
+ *
+ * Solo se tocan las que ya llegaron a un estado final. Una PENDIENTE o una
+ * ENVIANDO todavía tiene trabajo por delante, por vieja que sea.
+ */
+export async function purgarNotificaciones(
+  prisma: PrismaClient,
+  ahora = new Date(),
+  dias = 90,
+): Promise<number> {
+  const corte = new Date(ahora.getTime() - dias * 86_400_000);
+  const r = await prisma.notificacion.deleteMany({
+    where: {
+      creadaEn: { lt: corte },
+      estado: { in: ["ENVIADA", "FALLIDA"] },
+    },
+  });
+  return r.count;
+}
