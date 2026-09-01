@@ -44,7 +44,9 @@ export type NombreIcono =
   | "repetir"
   | "correo"
   | "luna"
-  | "corazon";
+  | "corazon"
+  | "ojo"
+  | "ojo-cerrado";
 
 /**
  * Los trazos, sueltos, para poder pasarlos a `MorphIcon` sin arrastrar el
@@ -88,6 +90,19 @@ export const TRAZOS: Record<NombreIcono, string[]> = {
   luna: ["M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"],
   corazon: [
     "M12 20.3s-7.5-4.6-7.5-9.6a4.3 4.3 0 0 1 7.5-2.9 4.3 4.3 0 0 1 7.5 2.9c0 5-7.5 9.6-7.5 9.6Z",
+  ],
+  /* Mostrar y ocultar una contraseña. Son dos trazos y no uno con una barra
+     encima, porque el "tachado" tiene que leerse también en alto contraste,
+     donde una línea fina sobre otra figura se pierde. */
+  ojo: [
+    "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z",
+    "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
+  ],
+  "ojo-cerrado": [
+    "M3 3l18 18",
+    "M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a18 18 0 0 1-3.2 4",
+    "M6.3 6.4A17.6 17.6 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.1-1.4",
+    "M9.9 9.9a3 3 0 0 0 4.2 4.2",
   ],
 };
 

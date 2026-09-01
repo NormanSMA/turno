@@ -10,6 +10,7 @@
  */
 
 import { Suspense, useState } from "react";
+import { CampoPassword } from "@/components/CampoPassword";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { esRutaSegura } from "@/core/rutas";
@@ -84,17 +85,12 @@ function Acceso() {
           />
         </label>
 
-        <label className="block">
-          <span className="etiqueta">Contraseña</span>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-borde bg-papel-alto px-3 py-3 text-base"
-          />
-        </label>
+        <CampoPassword
+          etiqueta="Contraseña"
+          valor={password}
+          onCambiar={setPassword}
+          autoComplete="current-password"
+        />
 
         {error && (
           <p role="alert" className="rounded-md bg-brasa-claro px-3 py-2 text-sm">

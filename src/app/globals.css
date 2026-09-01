@@ -249,6 +249,11 @@
 
 /* Zona táctil mínima de 44x44 aunque el icono mida 20-24. Vale para
    favoritos, cerrar, atrás, sumar, restar, navegación y filtros. */
+/* Amplía el área táctil a 44px sin cambiar el tamaño visible del control.
+   OJO: fija `position: relative`, así que NO se puede combinar con
+   `absolute` — la utilidad de Tailwind queda pisada y el elemento se
+   posiciona respecto de sí mismo. Para un control absoluto, darle 44px
+   reales (`h-11 w-11`) en vez de usar esto. */
 .toque {
   position: relative;
 }

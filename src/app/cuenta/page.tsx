@@ -11,6 +11,7 @@
  */
 
 import { Suspense, useState } from "react";
+import { CampoPassword } from "@/components/CampoPassword";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, ErrorApi } from "@/lib/cliente";
 
@@ -83,45 +84,28 @@ function Cuenta() {
       </p>
 
       <form onSubmit={guardar} className="mt-6 space-y-3">
-        <label className="block">
-          <span className="etiqueta">Contraseña actual</span>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={actual}
-            onChange={(e) => setActual(e.target.value)}
-            className="mt-1 w-full rounded-sm border border-borde bg-papel-alto px-3 py-3 text-base"
-          />
-        </label>
+        <CampoPassword
+          etiqueta="Contraseña actual"
+          valor={actual}
+          onCambiar={setActual}
+          autoComplete="current-password"
+        />
 
-        <label className="block">
-          <span className="etiqueta">Contraseña nueva</span>
-          <input
-            type="password"
-            required
-            minLength={12}
-            autoComplete="new-password"
-            value={nueva}
-            onChange={(e) => setNueva(e.target.value)}
-            className="mt-1 w-full rounded-sm border border-borde bg-papel-alto px-3 py-3 text-base"
-          />
-          <span className="mt-1 block text-xs text-tinta-suave">
-            Al menos 12 caracteres.
-          </span>
-        </label>
+        <CampoPassword
+          etiqueta="Contraseña nueva"
+          valor={nueva}
+          onCambiar={setNueva}
+          autoComplete="new-password"
+          minLength={12}
+          ayuda="Al menos 12 caracteres."
+        />
 
-        <label className="block">
-          <span className="etiqueta">Repetí la nueva</span>
-          <input
-            type="password"
-            required
-            autoComplete="new-password"
-            value={repetir}
-            onChange={(e) => setRepetir(e.target.value)}
-            className="mt-1 w-full rounded-sm border border-borde bg-papel-alto px-3 py-3 text-base"
-          />
-        </label>
+        <CampoPassword
+          etiqueta="Repetí la nueva"
+          valor={repetir}
+          onCambiar={setRepetir}
+          autoComplete="new-password"
+        />
 
         {error && (
           <p role="alert" className="rounded-sm bg-alerta-claro px-3 py-2 text-sm">

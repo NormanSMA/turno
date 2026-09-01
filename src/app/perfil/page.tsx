@@ -413,7 +413,7 @@ function DatosAcademicos({
           id="nombre"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
-          placeholder="Adriana"
+          placeholder="Norman"
           autoComplete="given-name"
           maxLength={80}
           className="mt-1.5 w-full rounded-sm border border-borde bg-fondo px-3 py-2.5 text-cuerpo outline-none focus:border-marca-texto"
