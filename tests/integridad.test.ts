@@ -531,14 +531,25 @@ describe("cut-off y disponibilidad operativa", () => {
       prisma,
       { cantidadUsuarios: 1, margenCutoffMin: 2 },
     );
-    // Franja 0: 12:00–12:10. t(p) = 10, margen = 2 → hay que pedir antes de 11:58.
+    /*
+     * El instante se deriva de la franja, no se escribe.
+     *
+     * Acá había un `2026-09-01T11:59:00Z` que solo tenía sentido con las
+     * franjas en una fecha fija; al hacerlas relativas al presente, la hora
+     * quedó apuntando a cualquier lado. Lo que la prueba quiere decir es
+     * "un minuto DESPUÉS de que se cerrara el cut-off", y eso se calcula.
+     *
+     * t(p) = 10 y margen = 2, así que hay que pedir 12 minutos antes del fin.
+     * Pidiendo a 11, ya no da tiempo — por un minuto.
+     */
+    const once = new Date(franjas[0].fin.getTime() - 11 * 60_000);
     const r = await reservar(prisma, {
       usuarioId: usuarios[0].id,
       comercioId: comercio.id,
       franjaSolicitadaId: franjas[0].id,
       items: [{ productoId: producto.id, cantidad: 1 }],
       idempotencyKey: crypto.randomUUID(),
-      ahora: new Date("2026-09-01T11:59:00Z"),
+      ahora: once,
     });
 
     expect(r.admitido).toBe(false);

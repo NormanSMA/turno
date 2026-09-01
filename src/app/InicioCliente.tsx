@@ -347,10 +347,14 @@ export function InicioCliente({
           </div>
 
           {comercios.length === 0 ? (
+            /* Este texto lo lee un estudiante con hambre, no quien mantiene el
+               sistema. Antes decía "corré npm run db:seed para poblar el
+               entorno de desarrollo": una instrucción de terminal, en la
+               portada, dirigida a la persona equivocada. Que un mensaje sea
+               cierto no lo hace apropiado para quien lo está leyendo. */
             <p className="rounded-lg border border-dashed border-borde bg-superficie p-6 text-chico text-texto-2">
-              Todavía no hay comercios cargados. Corré{" "}
-              <code className="hora">npm run db:seed</code> para poblar el
-              entorno de desarrollo.
+              Todavía no hay comercios disponibles. Estamos preparando el
+              servicio.
             </p>
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2">

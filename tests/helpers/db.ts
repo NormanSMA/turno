@@ -77,7 +77,20 @@ export async function montarEscenario(
     },
   });
 
-  const base = new Date("2026-09-01T12:00:00.000Z");
+  /*
+   * Las franjas se sitúan RELATIVAS AL PRESENTE, no en una fecha escrita.
+   *
+   * Acá había un `new Date("2026-09-01T12:00:00.000Z")`. Funcionó hasta que
+   * llegó ese día: entonces las franjas empezaron a nacer en el pasado, el
+   * cut-off las rechazó y 47 pruebas se cayeron de golpe sin que nadie hubiera
+   * tocado el código. Un escenario con fecha fija es una prueba con fecha de
+   * vencimiento, y vence sin avisar.
+   *
+   * Media hora por delante alcanza para que el cut-off pase con cualquier
+   * tiempo de preparación razonable, y sigue siendo determinista: lo que las
+   * pruebas comparan son diferencias entre franjas, no la hora concreta.
+   */
+  const base = new Date(Date.now() + 30 * 60_000);
   const franjas = [];
   for (let i = 0; i < cantidadFranjas; i++) {
     franjas.push(

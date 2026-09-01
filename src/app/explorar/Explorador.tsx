@@ -238,11 +238,29 @@ export function Explorador({
 
       {visibles.length === 0 ? (
         <div className="mt-4">
-          <Vacio
-            titulo="No encontramos nada con eso"
-            texto="Probá con otro nombre, o mirá todo el catálogo sin filtrar."
-            accion={{ href: "/explorar", texto: "Ver todo" }}
-          />
+          {/*
+           * Dos vacíos distintos, no uno.
+           *
+           * "Probá con otro nombre" solo tiene sentido si la persona escribió
+           * un nombre. Cuando el catálogo está vacío —un despliegue nuevo, un
+           * comercio que todavía no cargó su menú— ese texto le echa la culpa
+           * de algo que no hizo y la manda a buscar lo que no existe.
+           *
+           * El estado se distingue por lo que el usuario hizo, no por lo que
+           * se ve: si no hay búsqueda ni filtro, no buscó nada.
+           */}
+          {productos.length === 0 ? (
+            <Vacio
+              titulo="Todavía no hay nada cargado"
+              texto="Los comercios están preparando su menú. Volvé en un rato."
+            />
+          ) : (
+            <Vacio
+              titulo="No encontramos nada con eso"
+              texto="Probá con otro nombre, o mirá todo el catálogo sin filtrar."
+              accion={{ href: "/explorar", texto: "Ver todo" }}
+            />
+          )}
         </div>
       ) : (
         /* 1 columna en móvil, 2 en tablet, 3 en escritorio (§39). */

@@ -904,12 +904,34 @@ export function ClienteComercio({
               <h2 id="anticipables" className="etiqueta mb-3">
                 Se puede pedir por anticipado
               </h2>
-              {anticipables.length === 0 && (
-                <Vacio
-                  titulo="Nada coincide"
-                  texto="Proba con otra palabra o quita el filtro de tiempo."
-                />
-              )}
+              {/*
+                * Igual que en Explorar: "nada coincide" acusa de una búsqueda
+                * que puede no haber ocurrido. Un comercio recién dado de alta
+                * no tiene menú, y decirle al estudiante que cambie la palabra
+                * lo deja probando variantes de algo que no existe.
+                *
+                * Se separan además dos casos que tampoco son el mismo: no
+                * haber cargado NADA, y tener catálogo pero nada que se pueda
+                * pedir por anticipado — que es una decisión del comercio sobre
+                * sus tiempos de cocina, no un vacío.
+                */}
+              {anticipables.length === 0 &&
+                (productos.length === 0 ? (
+                  <Vacio
+                    titulo="Este comercio todavía no cargó su menú"
+                    texto="Cuando lo publique vas a poder pedir con anticipación."
+                  />
+                ) : enMostrador.length > 0 && !texto && filtro === "TODO" ? (
+                  <Vacio
+                    titulo="Acá no hay nada para pedir por anticipado"
+                    texto="Lo que ofrece este comercio se compra en el mostrador, sin reservar hora."
+                  />
+                ) : (
+                  <Vacio
+                    titulo="Nada coincide"
+                    texto="Probá con otra palabra o quitá el filtro de tiempo."
+                  />
+                ))}
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
                 {anticipables.map((p, i) => (
                   <TarjetaProducto
