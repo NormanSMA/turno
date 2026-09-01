@@ -547,13 +547,20 @@ async function ejecutarAdmision(
           // bolsillo con la aplicacion cerrada; el correo es el respaldo para
           // quien no instalo o nego el permiso. Cada fila lleva su propio
           // estado y sus propios reintentos.
+          /*
+           * Los avisos de pedido van SOLO por push.
+           *
+           * Antes se encolaban por los dos canales. Con ochocientos
+           * estudiantes eso son miles de correos al mes contra el límite de
+           * unos quinientos diarios de la cuenta que los envía — y el aviso
+           * llegaría tarde o no llegaría, que es peor que no prometerlo.
+           *
+           * El correo queda para lo único que no puede ir por push: el enlace
+           * de acceso, que hace falta ANTES de que exista un navegador con
+           * permiso para notificar.
+           */
           notificaciones: {
             create: [
-              {
-                destinatario: usuario.correo,
-                tipo: "PEDIDO_CONFIRMADO",
-                canal: "CORREO",
-              },
               {
                 destinatario: usuario.correo,
                 tipo: "PEDIDO_CONFIRMADO",

@@ -148,24 +148,25 @@ export async function cambiarEstado(
         });
         // Bandeja de salida: la notificación se entrega después. El unique
         // (pedidoId, tipo) hace que un reintento no duplique el correo.
-        for (const canal of ["CORREO", "PUSH"] as const) {
-          await tx.notificacion.upsert({
-            where: {
-              pedidoId_tipo_canal: {
-                pedidoId: pedido.id,
-                tipo: "PEDIDO_LISTO",
-                canal,
-              },
-            },
-            update: {},
-            create: {
+        // Solo push: ver la nota en `core/reserva.ts`. El correo se reserva
+        // para el enlace de acceso, que es el único aviso que tiene que llegar
+        // antes de que exista un navegador con permiso para notificar.
+        await tx.notificacion.upsert({
+          where: {
+            pedidoId_tipo_canal: {
               pedidoId: pedido.id,
-              destinatario: p.usuario.correo,
               tipo: "PEDIDO_LISTO",
-              canal,
+              canal: "PUSH",
             },
-          });
-        }
+          },
+          update: {},
+          create: {
+            pedidoId: pedido.id,
+            destinatario: p.usuario.correo,
+            tipo: "PEDIDO_LISTO",
+            canal: "PUSH",
+          },
+        });
       }
 
       return {

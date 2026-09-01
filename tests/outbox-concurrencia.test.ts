@@ -20,9 +20,8 @@
  */
 
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { reservar } from "@/core/reserva";
 import { vaciarBandeja } from "@/lib/correo";
-import { crearPrismaTest, limpiar, montarEscenario } from "./helpers/db";
+import { crearPrismaTest, limpiar } from "./helpers/db";
 
 const prisma = crearPrismaTest();
 
@@ -34,32 +33,23 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-/** Deja la bandeja con `cuantas` notificaciones de correo pendientes. */
+/**
+ * Deja la bandeja con `cuantas` notificaciones de correo pendientes.
+ *
+ * Se siembran directamente y no a través de un pedido: desde que los avisos de
+ * pedido van solo por push, una reserva ya no encola correo. Lo que esta
+ * prueba ejerce es **el reclamo atómico**, y para eso da igual de dónde salió
+ * la fila. Atarla al flujo de reservas la haría fallar por un cambio que no
+ * tiene nada que ver con lo que mide.
+ */
 async function bandejaCon(cuantas: number) {
-  const { comercio, producto, franjas, usuarios } = await montarEscenario(
-    prisma,
-    { capacidadMinutos: 1000, factorSeguridad: 1, cantidadUsuarios: cuantas },
-  );
-
-  // Franja futura y amplia: acá no se está probando la admisión.
-  await prisma.franja.update({
-    where: { id: franjas[0]!.id },
-    data: {
-      inicio: new Date(Date.now() + 30 * 60_000),
-      fin: new Date(Date.now() + 90 * 60_000),
-    },
+  await prisma.notificacion.createMany({
+    data: Array.from({ length: cuantas }, (_, i) => ({
+      destinatario: `est${i}@uam.edu.ni`,
+      tipo: "PEDIDO_CONFIRMADO" as const,
+      canal: "CORREO" as const,
+    })),
   });
-
-  for (const u of usuarios) {
-    const r = await reservar(prisma, {
-      usuarioId: u.id,
-      comercioId: comercio.id,
-      franjaSolicitadaId: franjas[0]!.id,
-      items: [{ productoId: producto.id, cantidad: 1 }],
-      idempotencyKey: crypto.randomUUID(),
-    });
-    if (!r.admitido) throw new Error("el escenario no debería rechazar pedidos");
-  }
 
   const pendientes = await prisma.notificacion.count({
     where: { estado: "PENDIENTE", canal: "CORREO" },
@@ -91,14 +81,24 @@ describe("bandeja de salida con dos workers a la vez", () => {
 
     await Promise.all([vaciarBandeja(prisma), vaciarBandeja(prisma)]);
 
-    const sinAtender = await prisma.notificacion.count({
-      where: { estado: "PENDIENTE", canal: "CORREO" },
+    // Ninguna se queda sin atender ni reclamada a medias.
+    const sinResolver = await prisma.notificacion.count({
+      where: { estado: { in: ["PENDIENTE", "ENVIANDO"] }, canal: "CORREO" },
     });
-    expect(sinAtender).toBe(0);
-    expect(
-      await prisma.notificacion.count({
-        where: { estado: "ENVIADA", canal: "CORREO" },
-      }),
-    ).toBe(total);
+    expect(sinResolver).toBe(0);
+
+    /*
+     * Se cuenta "resuelta", no "enviada".
+     *
+     * Desde que los avisos de pedido van solo por push, `componer` no arma
+     * correo para una fila de pedido y estas se cierran como FALLIDA. Eso es
+     * correcto —no hay nada que mandar— y no es lo que esta prueba mide: lo
+     * que mide es que el reclamo reparta el trabajo sin perder ni repetir
+     * filas. Exigir ENVIADA la ataría a qué correos existen hoy.
+     */
+    const resueltas = await prisma.notificacion.count({
+      where: { estado: { in: ["ENVIADA", "FALLIDA"] }, canal: "CORREO" },
+    });
+    expect(resueltas).toBe(total);
   });
 });

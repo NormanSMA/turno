@@ -115,17 +115,17 @@ async function suscribir(usuarioId: string, endpoint: string) {
 // ------------------------------------------------------------ La bandeja ---
 
 describe("un hecho, dos canales", () => {
-  it("confirmar un pedido encola CORREO y PUSH, no uno solo", async () => {
+  it("confirmar un pedido encola PUSH, y solo PUSH", async () => {
     const { pedidoId } = await escenarioConPedido();
 
     const filas = await prisma.notificacion.findMany({
       where: { pedidoId, tipo: "PEDIDO_CONFIRMADO" },
     });
 
-    expect(filas.map((f) => f.canal).sort()).toEqual(["CORREO", "PUSH"]);
+    expect(filas.map((f) => f.canal).sort()).toEqual(["PUSH"]);
   });
 
-  it("marcar LISTO encola los dos canales, y repetirlo no duplica", async () => {
+  it("marcar LISTO encola PUSH, y repetirlo no duplica", async () => {
     const { pedidoId, usuarios } = await escenarioConPedido();
 
     await cambiarEstado(prisma, {
@@ -144,13 +144,39 @@ describe("un hecho, dos canales", () => {
     const filas = await prisma.notificacion.findMany({
       where: { pedidoId, tipo: "PEDIDO_LISTO" },
     });
-    expect(filas.map((f) => f.canal).sort()).toEqual(["CORREO", "PUSH"]);
+    expect(filas.map((f) => f.canal).sort()).toEqual(["PUSH"]);
   });
 });
 
 describe("los canales no se pisan", () => {
+  /*
+   * La fila de correo se siembra a mano.
+   *
+   * Un pedido ya no encola correo —los avisos van solo por push—, pero la
+   * propiedad que estas pruebas fijan sigue siendo la misma y sigue siendo
+   * crítica: **cada vaciado toca solo su canal**. Sin el filtro, vaciar la
+   * bandeja de correo marcaría como entregadas filas de push sin que ningún
+   * teléfono se hubiera enterado de nada, y el estudiante se quedaría
+   * esperando un aviso que el sistema cree que mandó.
+   *
+   * Que hoy no haya correos de pedido no vuelve la regla innecesaria: la
+   * bandeja es compartida y el día que exista un correo diferido, este es el
+   * error que se colaría.
+   */
+  async function conFilaDeCorreo(pedidoId: string, destinatario: string) {
+    await prisma.notificacion.create({
+      data: {
+        pedidoId,
+        destinatario,
+        tipo: "PEDIDO_CONFIRMADO",
+        canal: "CORREO",
+      },
+    });
+  }
+
   it("vaciar la bandeja de correo NO marca las filas de push", async () => {
-    const { pedidoId } = await escenarioConPedido();
+    const { pedidoId, usuarios } = await escenarioConPedido();
+    await conFilaDeCorreo(pedidoId, usuarios[0].correo);
 
     await vaciarBandeja(prisma);
 
@@ -161,15 +187,15 @@ describe("los canales no se pisan", () => {
       where: { pedidoId, canal: "PUSH" },
     });
 
-    expect(correo.estado).toBe("ENVIADA");
-    // Sin el filtro por canal, esta fila saldría también como ENVIADA sin que
-    // ningún teléfono se hubiera enterado de nada.
+    // Se resolvió: con contenido o sin él, la bandeja la atendió.
+    expect(["ENVIADA", "FALLIDA"]).toContain(correo.estado);
     expect(push.estado).toBe("PENDIENTE");
     expect(push.intentos).toBe(0);
   });
 
   it("vaciar la bandeja de push NO marca las filas de correo", async () => {
-    const { pedidoId } = await escenarioConPedido();
+    const { pedidoId, usuarios } = await escenarioConPedido();
+    await conFilaDeCorreo(pedidoId, usuarios[0].correo);
 
     await vaciarBandejaPush(prisma);
 

@@ -297,17 +297,22 @@ describe("ciclo de vida y liberación de capacidad", () => {
       "RETIRADO",
     ]);
     // Bandeja de salida: confirmación + listo, una de cada tipo POR CANAL.
-    // Desde el ADR-14 el mismo hecho se entrega por correo y por push, con una
-    // fila independiente para cada uno; lo que sigue prohibido es que un mismo
-    // (tipo, canal) aparezca dos veces.
+    /*
+     * Los avisos de pedido van SOLO por push.
+     *
+     * Antes se encolaban también por correo. Con ochocientos estudiantes eso
+     * son miles de correos al mes contra el límite diario de la cuenta que los
+     * envía, y un aviso que llega tarde es peor que uno que no se prometió. El
+     * correo quedó para el enlace de acceso, que es lo único que tiene que
+     * llegar ANTES de que exista un navegador con permiso para notificar.
+     *
+     * Sigue prohibido que un mismo (tipo, canal) aparezca dos veces: de eso se
+     * encarga el unique de la tabla, y es lo que hace que un reintento no
+     * duplique el aviso.
+     */
     expect(
       p.notificaciones.map((n) => `${n.tipo}:${n.canal}`).sort(),
-    ).toEqual([
-      "PEDIDO_CONFIRMADO:CORREO",
-      "PEDIDO_CONFIRMADO:PUSH",
-      "PEDIDO_LISTO:CORREO",
-      "PEDIDO_LISTO:PUSH",
-    ]);
+    ).toEqual(["PEDIDO_CONFIRMADO:PUSH", "PEDIDO_LISTO:PUSH"]);
   });
 
   it("rechaza una transición inválida", async () => {

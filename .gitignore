@@ -82,3 +82,4 @@ audit/sast/semgrep*.txt
 # De ZAP se queda la configuracion, no el informe.
 audit/zap/informe.*
 audit/zap/salida.txt
+audit/correos/

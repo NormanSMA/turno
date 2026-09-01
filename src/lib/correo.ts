@@ -20,6 +20,15 @@
  */
 
 import nodemailer, { type Transporter } from "nodemailer";
+import {
+  aviso,
+  boton,
+  cierre,
+  envolver,
+  linea,
+  parrafo,
+  razones,
+} from "./correo-plantilla";
 import type { PrismaClient } from "@/generated/prisma/client";
 
 export interface Correo {
@@ -257,22 +266,18 @@ function baseUrl(): string {
   return process.env.APP_URL ?? "http://localhost:3000";
 }
 
-/** Envoltorio HTML mínimo. Sin imágenes ni CSS externo: los clientes de correo
- *  los bloquean y el mensaje tiene que leerse igual. */
-function envolver(titulo: string, cuerpo: string): string {
-  return `<!doctype html><html lang="es"><body style="margin:0;padding:24px;background:#f7fafa;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#071316">
-<div style="max-width:480px;margin:0 auto;background:#fff;border:1px solid #dde9ea;border-radius:12px;padding:28px">
-<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 14px"><tr>
-<td style="width:34px;height:34px;background:#009ca6;border-radius:10px;color:#fff;font-size:18px;font-weight:800;text-align:center;line-height:34px;font-family:system-ui,sans-serif">T</td>
-<td style="padding-left:10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#60636b">TURNO · Campus UAM</td>
-</tr></table>
-<h1 style="margin:0 0 16px;font-size:22px;line-height:1.2">${titulo}</h1>
-${cuerpo}
-</div>
-<p style="max-width:480px;margin:16px auto 0;font-size:11px;color:#60636b">Recibís este correo porque usás TURNO en el campus de la UAM. No se procesan pagos en la plataforma.</p>
-</body></html>`;
-}
-
+/**
+ * El único correo que TURNO manda.
+ *
+ * Los avisos de pedido van por push (ADR-14): el correo queda para lo que no
+ * puede ir por ahí, que es el enlace de acceso — hace falta ANTES de que exista
+ * un navegador con permiso para notificar.
+ *
+ * Va con su versión en **texto plano** además del HTML. No es una formalidad:
+ * hay quien lee el correo en un cliente que no muestra HTML, y los filtros de
+ * spam puntúan peor un mensaje que solo trae la versión rica — y este correo,
+ * de todos, es el que no se puede permitir caer en spam.
+ */
 export function correoEnlaceAcceso(para: string, token: string, volver?: string | null): Correo {
   const url = `${baseUrl()}/entrar?token=${encodeURIComponent(token)}${
     volver ? `&volver=${encodeURIComponent(volver)}` : ""
@@ -287,56 +292,22 @@ export function correoEnlaceAcceso(para: string, token: string, volver?: string 
       "El enlace vence en 15 minutos y sirve una sola vez.",
       "Si no lo pediste vos, ignorá este correo: nadie entró a tu cuenta.",
     ].join("\n"),
-    html: envolver(
-      "Entrá a TURNO",
-      `<p style="margin:0 0 20px;font-size:15px;line-height:1.5">Tocá el botón para entrar. No hace falta contraseña.</p>
-<p style="margin:0 0 20px"><a href="${url}" style="display:inline-block;background:#009ca6;color:#fff;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:600">Entrar a TURNO</a></p>
-<p style="margin:0 0 8px;font-size:13px;color:#60636b">El enlace vence en 15 minutos y sirve una sola vez.</p>
-<p style="margin:0;font-size:13px;color:#60636b">Si no lo pediste vos, ignorá este correo: nadie entró a tu cuenta.</p>`,
-    ),
-  };
-}
-
-export function correoPedidoConfirmado(
-  para: string,
-  datos: { codigo: string; hora: string; comercio: string; total: string },
-): Correo {
-  return {
-    para,
-    asunto: `Tu turno en ${datos.comercio}: ${datos.hora}`,
-    texto: [
-      `Reservaste tu pedido en ${datos.comercio}.`,
-      `Hora de retiro: ${datos.hora}`,
-      `Código: ${datos.codigo}`,
-      `Total: ${datos.total} (se paga al retirar)`,
-    ].join("\n"),
-    html: envolver(
-      `Listo a las ${datos.hora}`,
-      `<p style="margin:0 0 16px;font-size:15px">Reservaste tu pedido en <strong>${datos.comercio}</strong>.</p>
-<p style="margin:0 0 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#60636b">Código de retiro</p>
-<p style="margin:0 0 16px;font-family:ui-monospace,monospace;font-size:30px;font-weight:700;letter-spacing:.1em">${datos.codigo}</p>
-<p style="margin:0;font-size:14px;color:#60636b">${datos.total} · se paga al retirar</p>`,
-    ),
-  };
-}
-
-export function correoPedidoListo(
-  para: string,
-  datos: { codigo: string; comercio: string },
-): Correo {
-  return {
-    para,
-    asunto: `Tu pedido ${datos.codigo} está listo`,
-    texto: [
-      `Tu pedido está listo en ${datos.comercio}.`,
-      `Mostrá el código ${datos.codigo} en el mostrador.`,
-    ].join("\n"),
-    html: envolver(
-      "Tu pedido está listo",
-      `<p style="margin:0 0 16px;font-size:15px">Pasá a retirarlo en <strong>${datos.comercio}</strong>.</p>
-<p style="margin:0 0 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#60636b">Código de retiro</p>
-<p style="margin:0;font-family:ui-monospace,monospace;font-size:30px;font-weight:700;letter-spacing:.1em">${datos.codigo}</p>`,
-    ),
+    html: envolver({
+      titulo: "Tu acceso está listo",
+      cuerpo:
+        parrafo(
+          "Tocá el botón y quedás dentro. No hace falta contraseña ni recordar nada.",
+        ) +
+        boton(url, "Entrar a TURNO") +
+        aviso(
+          "El enlace <strong>vence en 15 minutos</strong> y sirve una sola vez. Si no lo pediste vos, ignorá este correo: nadie entró a tu cuenta.",
+        ) +
+        linea() +
+        parrafo("Qué hacés con TURNO", true) +
+        razones() +
+        cierre(),
+      pie: "Recibís este correo porque alguien pidió un enlace de acceso con tu dirección. El pago de los pedidos se hace en el mostrador; TURNO no procesa pagos.",
+    }),
   };
 }
 
@@ -495,31 +466,20 @@ type FilaNotificacion = {
   } | null;
 };
 
+/**
+ * Qué correo corresponde a una fila de la bandeja.
+ *
+ * Hoy: **ninguna**. El enlace de acceso se envía en el momento —el token en
+ * claro no se persiste nunca, así que no puede reconstruirse después— y los
+ * avisos de pedido salen por push.
+ *
+ * La función se conserva porque la bandeja sigue existiendo para el canal de
+ * correo y porque el día que haya un correo diferido (un resumen, un aviso de
+ * vencimiento) este es su lugar. Devolver `null` hace que la fila se marque
+ * como atendida sin intentar un envío que no tiene contenido.
+ */
 function componer(n: FilaNotificacion): Correo | null {
-  if (n.tipo === "ENLACE_ACCESO") return null; // se envía en el momento
-  if (!n.pedido) return null;
-
-  const hora = n.pedido.franja.fin.toLocaleTimeString("es-NI", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "America/Managua",
-  });
-  const comercio = n.pedido.franja.comercio.nombre;
-
-  if (n.tipo === "PEDIDO_CONFIRMADO") {
-    return correoPedidoConfirmado(n.destinatario, {
-      codigo: n.pedido.codigo,
-      hora,
-      comercio,
-      total: `C$ ${Number(n.pedido.total).toFixed(2)}`,
-    });
-  }
-  if (n.tipo === "PEDIDO_LISTO") {
-    return correoPedidoListo(n.destinatario, {
-      codigo: n.pedido.codigo,
-      comercio,
-    });
-  }
+  void n;
   return null;
 }
+
