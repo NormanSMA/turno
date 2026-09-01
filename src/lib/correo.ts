@@ -349,23 +349,91 @@ const MAX_INTENTOS = 5;
  * paralelo con otra ejecución: cada fila se marca ENVIADA o FALLIDA, y el
  * UNIQUE (pedidoId, tipo) impide que se cree una segunda del mismo tipo.
  */
+/**
+ * Reclama filas de la bandeja para esta ejecución, y solo para esta.
+ *
+ * **Por qué no basta con `SELECT … FOR UPDATE SKIP LOCKED`.** Un lock de
+ * Postgres vive mientras vive su transacción. El envío es una llamada de red
+ * que puede tardar segundos, y mantener una transacción abierta durante todo
+ * ese rato ocupa una conexión por worker y convierte un problema de
+ * duplicación en uno de agotamiento del pool. Por eso el reclamo se hace en un
+ * único statement que **cambia el estado**: la exclusión sobrevive al commit,
+ * que es justo lo que hace falta.
+ *
+ * `SKIP LOCKED` es lo que permite que dos ejecuciones se repartan el trabajo
+ * en vez de que la segunda espere a la primera.
+ *
+ * También rescata las filas atascadas: si el proceso muere entre el reclamo y
+ * la marca final, la fila queda en ENVIANDO y nadie la volvería a mirar. Pasado
+ * `MINUTOS_RECLAMO_VENCIDO` vuelve a estar disponible.
+ *
+ * La garantía resultante es **al menos una vez**, no exactamente una: si un
+ * worker envía y muere antes de marcar, el rescate reintentará. Exactamente-una
+ * exigiría idempotencia del lado del proveedor, que no tenemos. Duplicar en ese
+ * caso raro es preferible a perder el aviso, que es el fallo que de verdad le
+ * importa al estudiante.
+ */
+async function reclamar(
+  prisma: PrismaClient,
+  limite: number,
+): Promise<string[]> {
+  const filas = await prisma.$queryRaw<{ id: string }[]>`
+    UPDATE notificacion
+       SET estado = 'ENVIANDO', "reclamadaEn" = now()
+     WHERE id IN (
+       SELECT id FROM notificacion
+        WHERE canal = 'CORREO'
+          AND intentos < ${MAX_INTENTOS}
+          AND (
+            estado = 'PENDIENTE'
+            OR (
+              estado = 'ENVIANDO'
+              AND "reclamadaEn" < now() - make_interval(mins => ${MINUTOS_RECLAMO_VENCIDO})
+            )
+          )
+        ORDER BY "creadaEn" ASC
+        LIMIT ${limite}
+        FOR UPDATE SKIP LOCKED
+     )
+    RETURNING id
+  `;
+  return filas.map((f) => f.id);
+}
+
+/**
+ * Cuántos minutos se le dan a una ejecución para resolver lo que reclamó.
+ *
+ * Corto de más, dos workers se pisan igual; largo de más, un aviso perdido
+ * tarda demasiado en reintentarse. Diez minutos es más que cualquier envío
+ * razonable y menos que el intervalo con el que a alguien le importa el aviso.
+ */
+const MINUTOS_RECLAMO_VENCIDO = 10;
+
 export async function vaciarBandeja(
   prisma: PrismaClient,
   limite = 25,
 ): Promise<{ enviadas: number; fallidas: number; pendientes: number }> {
-  const pendientes = await prisma.notificacion.findMany({
-    // `canal: CORREO` no es decorativo: desde el ADR-14 la misma tabla lleva
-    // las entregas por push, y sin este filtro esta función intentaría
-    // "enviar por correo" una fila destinada al teléfono.
-    where: { estado: "PENDIENTE", canal: "CORREO", intentos: { lt: MAX_INTENTOS } },
-    orderBy: { creadaEn: "asc" },
-    take: limite,
-    include: {
-      pedido: {
-        include: { franja: { include: { comercio: true } } },
-      },
-    },
-  });
+  // El reclamo va primero y en un solo statement: sacarlas de PENDIENTE es lo
+  // que impide que otra ejecución simultánea las tome también. Leer y después
+  // marcar —que es lo que se hacía— deja una ventana en la que las dos leen lo
+  // mismo y el estudiante recibe el aviso por duplicado.
+  //
+  // `canal: CORREO` no es decorativo: desde el ADR-14 la misma tabla lleva las
+  // entregas por push, y sin ese filtro esta función intentaría "enviar por
+  // correo" una fila destinada al teléfono.
+  const reclamadas = await reclamar(prisma, limite);
+
+  const pendientes = reclamadas.length
+    ? await prisma.notificacion.findMany({
+        where: { id: { in: reclamadas } },
+        orderBy: { creadaEn: "asc" },
+        include: {
+          pedido: {
+            include: { franja: { include: { comercio: true } } },
+          },
+        },
+      })
+    : [];
 
   let enviadas = 0;
   let fallidas = 0;

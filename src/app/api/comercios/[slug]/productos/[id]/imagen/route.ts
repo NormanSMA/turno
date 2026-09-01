@@ -83,9 +83,21 @@ export async function PUT(
      * un año desde el disco del usuario. Es lo que permite cachear de forma
      * agresiva sin que una foto reemplazada se quede pegada.
      */
-    const foto = await prisma.$transaction(async (tx) => {
+    /*
+     * Las TRES escrituras van juntas o no va ninguna.
+     *
+     * El `producto.update` quedaba fuera de la transacción, y ahí hay una
+     * ventana real: si el proceso cae entre el commit y esa actualización, la
+     * foto vieja ya se borró, la nueva existe y `producto.imagenUrl` sigue
+     * apuntando a un id que ya no está. El resultado es un producto con la
+     * imagen rota de forma permanente, y nada que lo señale.
+     *
+     * El patrón correcto ya estaba veinte líneas más abajo, en DELETE: era un
+     * descuido en una de las dos rutas, no una decisión.
+     */
+    const { foto, imagenUrl } = await prisma.$transaction(async (tx) => {
       await tx.fotoProducto.deleteMany({ where: { productoId: producto.id } });
-      return tx.fotoProducto.create({
+      const creada = await tx.fotoProducto.create({
         data: {
           productoId: producto.id,
           datos: Buffer.from(bytes),
@@ -95,12 +107,14 @@ export async function PUT(
           bytes: bytes.length,
         },
       });
-    });
 
-    const imagenUrl = `/api/imagenes/${foto.id}`;
-    await prisma.producto.update({
-      where: { id: producto.id },
-      data: { imagenUrl },
+      const url = `/api/imagenes/${creada.id}`;
+      await tx.producto.update({
+        where: { id: producto.id },
+        data: { imagenUrl: url },
+      });
+
+      return { foto: creada, imagenUrl: url };
     });
 
     return ok({ imagenUrl, bytes: foto.bytes }, 201);

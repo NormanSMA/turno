@@ -221,8 +221,6 @@ export async function reservar(
   prisma: PrismaClient,
   solicitud: SolicitudPedido,
 ): Promise<ResultadoReserva> {
-  const ahora = solicitud.ahora ?? new Date();
-
   // Camino rápido de idempotencia, fuera de la transacción: la enorme mayoría
   // de los reintentos llega cuando el pedido original ya está confirmado.
   const previo = await prisma.pedido.findUnique({
@@ -259,7 +257,7 @@ export async function reservar(
       comercio,
       usuario,
       params,
-      ahora,
+      solicitud.ahora,
     );
     // Un rechazo de negocio en un REINTENTO no es un rechazo: si otra ejecución
     // con esta misma clave ya creó el pedido, la intención del cliente está
@@ -296,7 +294,14 @@ async function ejecutarAdmision(
   comercio: { id: string; factorSeguridad: unknown; tiempoMinAnticipable: number; margenCutoffMin: number; maxPedidosActivos: number },
   usuario: { id: string; correo: string; condicionExperimental: "A" | "B"; canalCaptacion: string | null; primerPedidoEn: Date | null },
   params: ParametrosComercio,
-  ahora: Date,
+  /**
+   * El reloj **inyectado**, si lo hay.
+   *
+   * Se recibe sin resolver a propósito: cuando no viene, la hora se toma
+   * DENTRO de la transacción y después de los locks (ver abajo). Resolverlo
+   * acá arriba era el defecto P0‑2.
+   */
+  ahoraInyectado: Date | undefined,
 ): Promise<ResultadoReserva> {
   const alfa = params.factorSeguridad;
   const condicion = usuario.condicionExperimental as CondicionExperimental;
@@ -427,6 +432,23 @@ async function ejecutarAdmision(
         cargaAsignada: Number(f.carga_asignada),
         abierta: f.abierta,
       }));
+
+      /*
+       * La hora, recién ahora.
+       *
+       * Acá arriba ya se adquirieron los locks: si esta transacción estuvo
+       * esperando a que otra soltara la franja, esa espera pudo durar
+       * segundos. El cut-off es la regla que dice "ya no da tiempo de
+       * cocinarlo", y medirla con la hora de cuando se pidió el turno —en vez
+       * de la de cuando le tocó— admite pedidos que el sistema sabe que no
+       * puede cumplir.
+       *
+       * El reloj inyectado se respeta cuando existe: es lo que hace
+       * verificables las reglas que dependen del tiempo, y las pruebas y el
+       * simulador dependen de ello. Solo se toma el reloj real cuando nadie
+       * dijo qué hora es.
+       */
+      const ahora = ahoraInyectado ?? new Date();
 
       const opciones = calcularOpcionesConCutoff(
         franjas,

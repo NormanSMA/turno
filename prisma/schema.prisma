@@ -375,6 +375,10 @@ enum TipoNotificacion {
 
 enum EstadoNotificacion {
   PENDIENTE
+  /// Reclamada por una ejecución de la bandeja, todavía sin resolver. Existe
+  /// para que dos workers no envíen el mismo aviso: quien la reclama la saca
+  /// de PENDIENTE en el mismo statement que la elige.
+  ENVIANDO
   ENVIADA
   FALLIDA
 }
@@ -397,6 +401,10 @@ model Notificacion {
   ultimoError  String?
   creadaEn     DateTime           @default(now()) @db.Timestamptz(3)
   enviadaEn    DateTime?          @db.Timestamptz(3)
+  /// Cuándo una ejecución de la bandeja tomó esta fila. Si el proceso muere
+  /// entre el reclamo y el envío, la fila quedaría en ENVIANDO para siempre;
+  /// esta marca es lo que permite que otra ejecución la retome.
+  reclamadaEn  DateTime?          @db.Timestamptz(3)
   /// Cuándo el usuario vio este aviso EN LA APLICACIÓN. Es distinto de
   /// `enviadaEn`, que dice cuándo salió por su canal: un push entregado a un
   /// teléfono bloqueado está enviado y no leído. La bandeja de la aplicación

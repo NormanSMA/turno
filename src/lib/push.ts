@@ -379,16 +379,65 @@ export async function entregarPushDePedido(
  * Idempotente y seguro de correr en paralelo con otra ejecución, igual que
  * `vaciarBandeja` para el correo.
  */
+/**
+ * Reclama filas de la bandeja de push para esta ejecución.
+ *
+ * Gemelo de `reclamar` en `lib/correo.ts`; la explicación completa de por qué
+ * el reclamo cambia el estado en vez de apoyarse en un lock vive allá. En
+ * resumen: un lock de Postgres muere con su transacción, y el envío es una
+ * llamada de red que no puede tener una transacción abierta esperándola.
+ *
+ * Están duplicados a propósito y no extraídos a un módulo común: son dos
+ * consultas de cuatro líneas sobre canales distintos, y el día que una tenga
+ * que cambiar sin la otra —un tope de intentos propio, un orden distinto— una
+ * abstracción compartida costaría más de lo que ahorra.
+ */
+async function reclamarPush(
+  prisma: PrismaClient,
+  limite: number,
+): Promise<string[]> {
+  const filas = await prisma.$queryRaw<{ id: string }[]>`
+    UPDATE notificacion
+       SET estado = 'ENVIANDO', "reclamadaEn" = now()
+     WHERE id IN (
+       SELECT id FROM notificacion
+        WHERE canal = 'PUSH'
+          AND intentos < ${MAX_INTENTOS}
+          AND (
+            estado = 'PENDIENTE'
+            OR (
+              estado = 'ENVIANDO'
+              AND "reclamadaEn" < now() - make_interval(mins => ${MINUTOS_RECLAMO_VENCIDO})
+            )
+          )
+        ORDER BY "creadaEn" ASC
+        LIMIT ${limite}
+        FOR UPDATE SKIP LOCKED
+     )
+    RETURNING id
+  `;
+  return filas.map((f) => f.id);
+}
+
+/** Ver `MINUTOS_RECLAMO_VENCIDO` en `lib/correo.ts`. */
+const MINUTOS_RECLAMO_VENCIDO = 10;
+
 export async function vaciarBandejaPush(
   prisma: PrismaClient,
   limite = 25,
 ): Promise<{ entregadas: number; fallidas: number; pendientes: number }> {
-  const pendientes = await prisma.notificacion.findMany({
-    where: { estado: "PENDIENTE", canal: "PUSH", intentos: { lt: MAX_INTENTOS } },
-    orderBy: { creadaEn: "asc" },
-    take: limite,
-    include: INCLUIR_PEDIDO,
-  });
+  // Mismo reclamo atómico que el correo, y por el mismo motivo: leer y después
+  // marcar deja una ventana en la que dos ejecuciones toman las mismas filas y
+  // el teléfono vibra dos veces por el mismo pedido.
+  const reclamadas = await reclamarPush(prisma, limite);
+
+  const pendientes = reclamadas.length
+    ? await prisma.notificacion.findMany({
+        where: { id: { in: reclamadas } },
+        orderBy: { creadaEn: "asc" },
+        include: INCLUIR_PEDIDO,
+      })
+    : [];
 
   let entregadas = 0;
   let fallidas = 0;
