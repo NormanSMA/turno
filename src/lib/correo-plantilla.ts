@@ -159,6 +159,10 @@ export function envolver({ titulo, cuerpo, pie }: Bloque): string {
     .t-suave { color: ${C.oscTexto2} !important; }
     .t-caja { background: ${C.oscSuperficie2} !important; border-color: ${C.oscBorde} !important; }
     .t-linea { border-color: ${C.oscBorde} !important; }
+    /* El boton NO se adapta al tema: el rojo de marca es el mismo en los dos.
+       Sin esto, los clientes que recalculan colores lo aclaran hasta el salmon. */
+    .t-boton { background: ${C.marca} !important; background-color: ${C.marca} !important; }
+    .t-boton-texto { color: #ffffff !important; }
   }
   /* En un telefono, 32px a cada lado se comen un tercio del ancho util. */
   @media (max-width: 480px) {
@@ -214,9 +218,21 @@ export function parrafo(html: string, suave = false): string {
  * versiones con motor de Word.
  */
 export function boton(href: string, texto: string): string {
+  /*
+   * `bgcolor` además del CSS, y no es redundancia.
+   *
+   * iOS convierte los correos a modo oscuro por su cuenta: recalcula los
+   * colores para "adaptarlos" al fondo, y al rojo de marca lo aclaraba hasta
+   * dejarlo en salmón. El botón perdía la fuerza justo donde más importa.
+   *
+   * Esos motores respetan el atributo `bgcolor` —HTML de los noventa— mucho
+   * mejor que la propiedad CSS, y la clase `t-boton` vuelve a fijar el color en
+   * la consulta de tema oscuro para los clientes que sí la aplican. Entre las
+   * tres capas, el botón se queda rojo en todos.
+   */
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 18px"><tr>
-<td style="background:${C.marca};border-radius:999px;mso-padding-alt:15px 34px">
-<a href="${href}" style="display:inline-block;padding:15px 34px;font:600 16px/1 ${FUENTE};color:#ffffff;text-decoration:none">${texto}</a>
+<td class="t-boton" bgcolor="${C.marca}" style="background:${C.marca};background-color:${C.marca};border-radius:999px;mso-padding-alt:15px 34px">
+<a href="${href}" class="t-boton-texto" style="display:inline-block;padding:15px 34px;font:600 16px/1 ${FUENTE};color:#ffffff;text-decoration:none">${texto}</a>
 </td></tr></table>`;
 }
 

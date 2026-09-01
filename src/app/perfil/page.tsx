@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { NOMBRES_CARRERAS } from "@/core/carreras";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Navegacion } from "@/components/Navegacion";
@@ -425,13 +426,37 @@ function DatosAcademicos({
         <label className="mt-4 block text-chico font-medium" htmlFor="carrera">
           Carrera
         </label>
+        {/*
+          `datalist` y no `select`: sugiere sin obligar.
+
+          El campo era texto libre, y eso da datos que no se pueden agrupar —
+          "Ing. Sistemas", "ingenieria de sistemas" y "Sistemas" son tres filas
+          para el análisis y una sola carrera en la realidad. Pero un desplegable
+          cerrado sería peor: el catálogo sale de la página pública de la
+          universidad y puede estar incompleto, así que a quien estudie algo que
+          no figura el sistema le diría que su carrera no existe.
+
+          Con esto, quien encuentra la suya la elige y el dato queda
+          normalizado; quien no, escribe. Y lo que se escriba a mano es
+          justamente la señal de qué le falta al catálogo.
+        */}
         <input
           id="carrera"
+          list="carreras"
           value={carrera}
           onChange={(e) => setCarrera(e.target.value)}
-          placeholder="Ingeniería en Sistemas"
+          placeholder="Ingeniería de Sistemas"
+          autoComplete="off"
           className="mt-1.5 w-full rounded-sm border border-borde bg-fondo px-3 py-2.5 text-cuerpo outline-none focus:border-marca-texto"
         />
+        <datalist id="carreras">
+          {NOMBRES_CARRERAS.map((n) => (
+            <option key={n} value={n} />
+          ))}
+        </datalist>
+        <p className="mt-1 text-caption text-texto-2">
+          Elegí de la lista o escribí la tuya si no está.
+        </p>
 
         <label className="mt-4 block text-chico font-medium" htmlFor="anio">
           Año
