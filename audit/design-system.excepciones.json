@@ -68,5 +68,10 @@
     "archivo": "src/components/LineaTiempo.tsx",
     "regla": "color-literal",
     "motivo": "Color del trazo de la línea de tiempo del pedido, elegido para leerse sobre las dos superficies de la tarjeta."
+  },
+  {
+    "archivo": "src/lib/correo-plantilla.ts",
+    "regla": "color-literal",
+    "motivo": "Misma razon que correo.ts: es la plantilla del correo. Los clientes no resuelven variables CSS -Outlook ni siquiera resuelve `:root`- y ademas el HTML sale por SMTP, lejos de cualquier hoja de estilos. Los valores son copia literal de globals.css y estan agrupados en un solo objeto `C` para que se vea de un golpe si se desincronizan; el linter marco dos grises que yo habia escrito de memoria y no coincidian, que es exactamente el trabajo que se le pide."
   }
 ]
