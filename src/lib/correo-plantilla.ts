@@ -134,22 +134,6 @@ function razones(): string {
 </tr></table>`;
 }
 
-/**
- * El cierre: la escena del mostrador.
- *
- * Va abajo y no arriba a propósito. Arriba compite con lo único que este correo
- * tiene que lograr —que se toque el botón—; abajo cierra, y a esa altura el
- * lector ya decidió. Es el momento de mostrarle cómo se ve el final del
- * recorrido: alguien entregando el pedido sobre el mostrador.
- */
-export function cierre(): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0"><tr>
-<td style="padding:0;line-height:0;font-size:0">
-<img src="${urlImagen("mostrador.png")}" width="476" alt="Retirás tu pedido en el mostrador, sin fila" style="display:block;width:100%;max-width:476px;height:auto;border:0;border-radius:10px" />
-</td>
-</tr></table>`;
-}
-
 export interface Bloque {
   titulo: string;
   cuerpo: string;

@@ -23,7 +23,6 @@ import nodemailer, { type Transporter } from "nodemailer";
 import {
   aviso,
   boton,
-  cierre,
   envolver,
   linea,
   parrafo,
@@ -304,8 +303,7 @@ export function correoEnlaceAcceso(para: string, token: string, volver?: string 
         ) +
         linea() +
         parrafo("Qué hacés con TURNO", true) +
-        razones() +
-        cierre(),
+        razones(),
       pie: "Recibís este correo porque alguien pidió un enlace de acceso con tu dirección. El pago de los pedidos se hace en el mostrador; TURNO no procesa pagos.",
     }),
   };
