@@ -10,9 +10,10 @@
  */
 
 import { Suspense, useState } from "react";
+import { olvidarSesion } from "@/lib/sesion-cliente";
 import { CampoPassword } from "@/components/CampoPassword";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { esRutaSegura } from "@/core/rutas";
 import { api, ErrorApi } from "@/lib/cliente";
 
@@ -23,7 +24,6 @@ interface Respuesta {
 }
 
 function Acceso() {
-  const router = useRouter();
   const params = useSearchParams();
   // Se descarta cualquier destino que no sea una ruta relativa de este sitio.
   const crudo = params.get("volver");
@@ -49,7 +49,30 @@ function Acceso() {
       // de los dos a navegar de más en cada acceso.
       const destino =
         volver ?? (r.rol === "ADMIN" ? "/panel" : "/cocina/cafeteria-central");
-      router.replace(r.debeCambiarPassword ? "/cuenta?cambiar=1" : destino);
+
+      /*
+       * Recarga completa, no `router.replace`.
+       *
+       * La sesión se cachea a nivel de módulo para no pedirla N veces
+       * (`lib/sesion-cliente`), y una navegación de cliente **no reinicia ese
+       * módulo**: la aplicación seguía creyendo que quien acababa de entrar era
+       * un invitado, con el menú de invitado, hasta que la persona recargaba a
+       * mano. Entraba y quedaba afuera.
+       *
+       * `olvidarSesion()` existía justo para esto y no la llamaba nadie —el
+       * comentario de ese archivo afirmaba "se invalida al entrar y al salir",
+       * y era verdad solo al salir—. Se invalida igual, por si el destino no
+       * llegara a recargar.
+       *
+       * Y hace falta la recarga completa además de la invalidación: desde la
+       * fase 3 la portada resuelve la sesión en el SERVIDOR y la recibe como
+       * prop, así que un árbol de React conservado seguiría mostrando el estado
+       * anterior aunque la caché del cliente ya estuviera limpia. Es la misma
+       * razón por la que salir y canjear el enlace mágico también recargan.
+       */
+      olvidarSesion();
+      const url = r.debeCambiarPassword ? "/cuenta?cambiar=1" : destino;
+      window.location.assign(url);
     } catch (err) {
       setError(
         err instanceof ErrorApi
