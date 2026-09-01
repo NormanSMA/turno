@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       r.reintento ? 200 : 201,
     );
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }
 

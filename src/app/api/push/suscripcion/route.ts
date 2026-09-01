@@ -52,7 +52,7 @@ export async function POST(req: Request) {
 
     return ok({ registrada: true }, 201);
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }
 
@@ -71,6 +71,6 @@ export async function DELETE(req: Request) {
 
     return ok({ dadaDeBaja: count > 0 });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

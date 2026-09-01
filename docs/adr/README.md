@@ -22,6 +22,7 @@ ninguna decisión — que es el error 04 del instructivo.
 | [ADR-14](adr-14-web-push.md) | Web Push, y el sondeo solo con la pestaña a la vista | Aceptada |
 | [ADR-18](adr-18-infraestructura.md) | Vercel y Neon; el cómputo persistente queda como salida | Aceptada |
 | [ADR-19](adr-19-motion.md) | El motion system se implementa con la plataforma | Aceptada |
+| [ADR-20](adr-20-hardening.md) | Concurrencia, retención y observabilidad para producción | Aceptada |
 
 Los ADR 15 a 17 están reservados para las decisiones de producto ya acordadas y
 todavía no implementadas: orden multi-comercio, cupones, y la exclusión

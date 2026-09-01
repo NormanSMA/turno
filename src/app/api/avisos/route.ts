@@ -104,6 +104,6 @@ export async function PATCH(req: Request) {
 
     return ok({ marcados: count });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

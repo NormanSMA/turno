@@ -68,6 +68,6 @@ export async function PATCH(
       capacidadLiberadaMin: r.capacidadLiberadaMin,
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

@@ -42,6 +42,6 @@ export async function POST(req: Request) {
   } catch (e) {
     // Un correo no institucional responde 403 con mensaje claro: no es un caso
     // a ocultar, es la regla de pertenencia declarada en el Capítulo III.
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

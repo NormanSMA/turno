@@ -23,6 +23,6 @@ export async function PATCH(req: Request) {
       destino: sesion.rol === "ADMIN" ? "/panel" : "/cocina",
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

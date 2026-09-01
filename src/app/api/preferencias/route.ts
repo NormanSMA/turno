@@ -75,6 +75,6 @@ export async function PATCH(req: Request) {
       },
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

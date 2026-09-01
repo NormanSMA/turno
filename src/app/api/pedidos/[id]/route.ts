@@ -95,6 +95,6 @@ export async function GET(
       ),
     }, etag);
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

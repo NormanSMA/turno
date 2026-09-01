@@ -39,6 +39,6 @@ export async function POST(
     if (!r) return fallo("NO_ENCONTRADO", "Comercio inexistente", 404);
     return ok(r);
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

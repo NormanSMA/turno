@@ -71,6 +71,6 @@ export async function POST(req: Request) {
 
     return ok({ puntaje });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

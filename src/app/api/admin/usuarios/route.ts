@@ -147,7 +147,7 @@ export async function PATCH(req: Request) {
     await registrar(sesion?.usuarioId, accion, antes, despues);
     return ok({ rol: despues.rol });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }
 

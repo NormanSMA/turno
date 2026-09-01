@@ -219,6 +219,6 @@ export async function GET(req: Request) {
       })),
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

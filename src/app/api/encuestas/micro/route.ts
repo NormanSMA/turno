@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 
     return ok({ pregunta: preguntaDelDia() });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }
 
@@ -83,6 +83,6 @@ export async function POST(req: Request) {
 
     return ok({ registrada: true });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

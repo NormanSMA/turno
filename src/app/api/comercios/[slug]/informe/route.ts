@@ -119,6 +119,6 @@ export async function GET(
       ocupacion: calcularOcupacion(paraOcupacion),
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

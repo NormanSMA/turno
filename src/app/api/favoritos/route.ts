@@ -71,7 +71,7 @@ export async function POST(req: Request) {
 
     return ok({ marcado: true });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }
 
@@ -88,6 +88,6 @@ export async function DELETE(req: Request) {
 
     return ok({ marcado: false });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

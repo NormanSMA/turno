@@ -22,6 +22,6 @@ export async function PATCH(
       archivado: p.archivado,
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

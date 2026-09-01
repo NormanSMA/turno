@@ -26,6 +26,6 @@ export async function POST(req: Request) {
     almacen.set(COOKIE_SESION, r.token, opcionesCookie(r.expiraEn));
     return ok({ autenticado: true });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

@@ -116,6 +116,6 @@ export async function PATCH(req: Request) {
 
     return ok({ guardado: true });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

@@ -119,7 +119,7 @@ export async function PUT(
 
     return ok({ imagenUrl, bytes: foto.bytes }, 201);
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }
 

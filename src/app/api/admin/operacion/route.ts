@@ -198,6 +198,6 @@ export async function POST(req: Request) {
 
     return ok({ afectados: objetivo.map((c) => c.nombre) });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

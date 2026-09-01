@@ -20,6 +20,6 @@ export async function PATCH(
       abierta: f.abierta,
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

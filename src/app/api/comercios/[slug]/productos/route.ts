@@ -16,6 +16,6 @@ export async function POST(
     const p = await crearProducto(comercio.id, sesion.usuarioId, datos);
     return ok({ id: p.id, nombre: p.nombre }, 201);
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

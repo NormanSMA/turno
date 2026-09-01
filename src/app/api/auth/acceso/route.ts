@@ -52,6 +52,6 @@ export async function POST(req: Request) {
       debeCambiarPassword: r.debeCambiarPassword,
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

@@ -107,6 +107,6 @@ export async function PATCH(
       factorSeguridad: Number(actualizado.factorSeguridad),
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

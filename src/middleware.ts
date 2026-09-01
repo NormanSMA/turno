@@ -79,10 +79,28 @@ export function middleware(peticion: NextRequest) {
   // además de devolverla al navegador.
   const cabeceras = new Headers(peticion.headers);
   cabeceras.set("x-nonce", nonce);
+
+  /*
+   * Identificador de petición.
+   *
+   * Se genera acá, una vez, y acompaña a todo lo que se registre durante esta
+   * petición. Sin él, un error en los registros es un hecho suelto: no se puede
+   * saber qué más pasó en la misma llamada ni cruzarlo con lo que reporta quien
+   * lo sufrió.
+   *
+   * Se respeta el que venga de fuera —los proxies y las plataformas suelen
+   * poner el suyo— para que la traza no se corte en el borde.
+   */
+  const peticionId =
+    peticion.headers.get("x-request-id") ?? crypto.randomUUID();
+  cabeceras.set("x-request-id", peticionId);
   cabeceras.set("Content-Security-Policy", csp);
 
   const respuesta = NextResponse.next({ request: { headers: cabeceras } });
   respuesta.headers.set("Content-Security-Policy", csp);
+  // Vuelve al cliente: quien reporta un fallo puede dar este identificador y
+  // eso alcanza para encontrar la traza exacta.
+  respuesta.headers.set("x-request-id", peticionId);
   return respuesta;
 }
 

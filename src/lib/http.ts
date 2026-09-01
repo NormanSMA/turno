@@ -13,6 +13,7 @@ import { NoAutenticado, NoAutorizado } from "./auth";
 import { TransicionInvalida } from "@/core/estados";
 import { CancelacionNoPermitida } from "@/core/ciclo-vida";
 import { consumirLimite, type AccionLimitada } from "@/core/limites";
+import * as registro from "./registro";
 import { CambioRechazado } from "./comercio";
 import { prisma } from "./db";
 
@@ -93,7 +94,16 @@ export function fallo(
  * registra en el servidor pero NO se devuelve al cliente, porque un stack trace
  * en la respuesta es información gratis para quien esté sondeando.
  */
-export function manejarError(e: unknown) {
+/**
+ * Traduce una excepción a una respuesta, y deja rastro de las que no se
+ * esperaban.
+ *
+ * `req` es opcional para no romper a los llamadores que ya existen, pero
+ * pasarlo es lo que hace útil el registro: sin la petición no hay ruta, ni
+ * método, ni identificador con el que cruzar el error contra lo que reportó
+ * quien lo sufrió.
+ */
+export function manejarError(e: unknown, req?: Request) {
   if (e instanceof ZodError) {
     return fallo("DATOS_INVALIDOS", "La solicitud no es válida", 422, e.issues);
   }
@@ -114,7 +124,15 @@ export function manejarError(e: unknown) {
     // sistema en un estado que el modelo declara imposible.
     return fallo("CAMBIO_RECHAZADO", e.message, 422, e.violaciones);
   }
-  console.error("[turno] error no controlado:", e);
+  // Los errores de arriba son respuestas previstas del sistema y no se
+  // registran: llenarían el log de ruido y esconderían lo que sí importa.
+  // Acá abajo está lo que nadie previó, que es lo único que hay que mirar.
+  registro.error("error_no_controlado", e, {
+    peticionId: req && registro.peticionIdDe(req),
+    ruta: req && registro.rutaDe(req),
+    metodo: req?.method,
+    estado: 500,
+  });
   return fallo("ERROR_INTERNO", "Ocurrió un error inesperado", 500);
 }
 

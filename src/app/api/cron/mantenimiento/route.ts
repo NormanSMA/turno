@@ -80,6 +80,6 @@ async function ejecutar(req: Request) {
       avisosPurgados,
     });
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }

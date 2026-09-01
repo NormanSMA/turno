@@ -18,6 +18,6 @@ export async function POST(
     // operador regenera un rango ya existente, "0 creadas" no es un fallo.
     return ok(r);
   } catch (e) {
-    return manejarError(e);
+    return manejarError(e, req);
   }
 }
