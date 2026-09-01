@@ -1,16 +1,26 @@
 /**
- * POST /api/cron/mantenimiento — barrido periódico.
+ * Mantenimiento periódico: barrido de vencidos, bandeja de salida y purgas.
  *
- * Hace seis cosas, todas idempotentes: marca NO_SHOW, recalcula cumplimiento
- * vencido, vacía la bandeja de correo pendiente, reintenta los avisos push que
- * la entrega inmediata no logró, purga contadores de límite y borra
- * credenciales vencidas.
+ * **Se dispara desde DOS relojes, y no es redundancia.**
  *
- * Es además el LATIDO del despliegue (ADR-18): el proveedor de base de datos
- * gratuito suspende un proyecto que pasa demasiado tiempo sin consultas, y esta
- * invocación diaria es la que garantiza que eso no ocurra durante un receso
- * académico. Se protege con un secreto compartido
- * porque un cron no tiene sesión; sin él, cualquiera podría dispararlo.
+ * El `vercel.json` declara una ejecución **diaria**, porque el plan Hobby no
+ * admite más: un cron cada diez minutos hace fallar el despliegue entero. Esa
+ * corrida diaria es la red de seguridad — garantiza que nada se quede sin
+ * atender aunque todo lo demás falle.
+ *
+ * La cadencia real la marca un **disparador externo** que llama a esta misma
+ * ruta con el secreto en la cabecera. Eso tiene dos ventajas sobre el cron de
+ * la plataforma, más allá de esquivar el límite del plan:
+ *
+ *  - **Se puede acotar al horario del campus.** Neon duerme a los cinco
+ *    minutos de inactividad y el plan gratuito da 100 CU-hours al mes; un cron
+ *    cada diez minutos las veinticuatro horas mantendría la base despierta
+ *    siempre y se comería el mes. De madrugada no hay pedidos que barrer.
+ *  - **No ata la operación al proveedor de hosting.** Mover el despliegue no
+ *    obliga a rehacer la programación.
+ *
+ * Es idempotente: correrla de más no hace daño, correrla de menos sí — un
+ * pedido vencido que nadie barre sigue ocupando capacidad de una franja.
  */
 import { prisma } from "@/lib/db";
 import { barrerVencidos } from "@/core/ciclo-vida";
