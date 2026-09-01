@@ -33,7 +33,8 @@
     "audit:e2e:ui": "playwright test --ui",
     "audit:lighthouse": "lighthouse http://localhost:3100/ --only-categories=performance,accessibility,best-practices,seo --output=json --output=html --output-path=audit/lighthouse/portada --chrome-flags=\"--headless=new --no-sandbox --disable-dev-shm-usage\" --throttling-method=provided --quiet",
     "audit": "tsx scripts/auditoria.ts",
-    "audit:design": "tsx scripts/linter-design-system.ts"
+    "audit:design": "tsx scripts/linter-design-system.ts",
+    "db:seed:prod": "tsx prisma/seed-produccion.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
