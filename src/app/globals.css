@@ -784,3 +784,27 @@ dialog:not([open]) {
     animation: none !important;
   }
 }
+
+/* --- Campos autocompletados ---------------------------------------------
+   Chrome y Safari pintan su propio fondo en los campos que rellenan solos, e
+   ignoran el `background` del CSS: el campo queda gris azulado sobre el papel
+   blanco y en tema oscuro queda casi ilegible. No se puede sobrescribir con
+   `background` —el navegador gana— pero sí tapar con una sombra interna del
+   grosor de la caja, que es la técnica estándar.
+
+   `transition-delay` gigante evita el destello: el navegador anima su fondo al
+   enfocar, y sin esto se ve el gris un instante antes de que la sombra lo tape.
+
+   Va sin `!important` porque el selector `:-webkit-autofill` ya gana por
+   especificidad a las clases de utilidad. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-texto);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-papel-alto) inset;
+  box-shadow: 0 0 0 1000px var(--color-papel-alto) inset;
+  caret-color: var(--color-texto);
+  transition: background-color 100000s ease-in-out 0s;
+}

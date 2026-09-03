@@ -104,7 +104,7 @@ function Acceso() {
             autoComplete="username"
             value={correo}
             onChange={(e) => setCorreo(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-borde bg-papel-alto px-3 py-3 text-base"
+            className="mt-1 w-full rounded-sm border border-borde bg-papel-alto px-3 py-3 text-base outline-none focus:border-marca-texto"
           />
         </label>
 
