@@ -151,11 +151,39 @@ export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
       contador: enCurso,
       etiquetaContador: "en curso",
     });
+    /*
+     * Los avisos tienen destino propio, con su campana.
+     *
+     * Estaban dos niveles adentro —Perfil › Bandeja de avisos— y el contador
+     * de no leídos se pintaba sobre el icono de Perfil, que es un sitio que no
+     * los anuncia: el número decía que había algo pendiente sin decir qué, y
+     * llegar hasta ellos costaba dos toques que nadie da.
+     *
+     * **Solo para quien no opera.** La barra de móvil pinta `slice(0, 5)`, así
+     * que un destino más se lo quita a alguien: con este dentro, un comercio
+     * perdería "Cocina" de la barra inferior — la pantalla que usa todo el día
+     * y desde el teléfono. Quien opera sigue llegando a los avisos por Perfil,
+     * que para ese rol es donde ya los busca.
+     */
+    const opera = rol === "COMERCIO" || rol === "ADMIN";
+
+    if (!opera) {
+      destinos.push({
+        href: "/avisos",
+        texto: "Avisos",
+        icono: "campana",
+        contador: sinLeer,
+        etiquetaContador: "sin leer",
+      });
+    }
+
     destinos.push({
       href: "/perfil",
       texto: "Perfil",
       icono: "perfil",
-      contador: sinLeer,
+      // El contador se queda en Perfil solo para quien no tiene la campana;
+      // con las dos cosas, el mismo número aparecería dos veces en la barra.
+      contador: opera ? sinLeer : 0,
       etiquetaContador: "sin leer",
     });
   } else {
