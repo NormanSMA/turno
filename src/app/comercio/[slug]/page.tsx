@@ -212,6 +212,7 @@ function Catalogo({
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
+  const [editando, setEditando] = useState<ProductoAdmin | null>(null);
 
   async function cambiar(id: string, datos: Record<string, unknown>) {
     setOcupado(id);
@@ -262,6 +263,7 @@ function Catalogo({
             tiempoMin={estado.comercio.tiempoMinAnticipable}
             ocupado={ocupado === p.id}
             onCambiar={cambiar}
+            onEditar={() => setEditando(p)}
           />
         ))}
       </ul>
@@ -279,18 +281,25 @@ function Catalogo({
                 tiempoMin={estado.comercio.tiempoMinAnticipable}
                 ocupado={ocupado === p.id}
                 onCambiar={cambiar}
+                onEditar={() => setEditando(p)}
               />
             ))}
           </ul>
         </details>
       )}
 
-      {creando && (
-        <NuevoProducto
+      {(creando || editando) && (
+        <FormularioProducto
           slug={slug}
-          onCerrar={() => setCreando(false)}
-          onCreado={() => {
+          producto={editando}
+          tiempoMin={estado.comercio.tiempoMinAnticipable}
+          onCerrar={() => {
             setCreando(false);
+            setEditando(null);
+          }}
+          onGuardado={() => {
+            setCreando(false);
+            setEditando(null);
             onCambio();
           }}
         />
@@ -304,11 +313,13 @@ function FilaCatalogo({
   tiempoMin,
   ocupado,
   onCambiar,
+  onEditar,
 }: {
   producto: ProductoAdmin;
   tiempoMin: number;
   ocupado: boolean;
   onCambiar: (id: string, datos: Record<string, unknown>) => void;
+  onEditar: () => void;
 }) {
   const inutil =
     producto.anticipable && producto.tiempoPreparacionMin < tiempoMin;
@@ -357,6 +368,14 @@ function FilaCatalogo({
           <button
             type="button"
             disabled={ocupado}
+            onClick={onEditar}
+            className="presiona rounded-full border border-borde px-2.5 py-1 text-xs font-medium disabled:opacity-40"
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            disabled={ocupado}
             onClick={() =>
               onCambiar(producto.id, { archivado: !producto.archivado })
             }
@@ -401,19 +420,58 @@ function Interruptor({
   );
 }
 
-function NuevoProducto({
+/**
+ * Alta y edición de un producto, en el mismo formulario.
+ *
+ * Son la misma pantalla a propósito. Cuando el alta y la edición son dos
+ * formularios distintos, divergen: uno gana un campo y el otro no, y termina
+ * habiendo cosas que solo se pueden poner al crear —que es exactamente lo que
+ * pasaba acá, donde un precio mal tecleado obligaba a archivar el producto y
+ * crearlo de nuevo, perdiendo su historial de pedidos.
+ */
+function FormularioProducto({
   slug,
+  producto,
+  tiempoMin,
   onCerrar,
-  onCreado,
+  onGuardado,
 }: {
   slug: string;
+  /** `null` = alta. Con producto = edición. */
+  producto: ProductoAdmin | null;
+  /** t_mín del comercio: por debajo de esto, anticipar no sirve de nada. */
+  tiempoMin: number;
   onCerrar: () => void;
-  onCreado: () => void;
+  onGuardado: () => void;
 }) {
-  const [nombre, setNombre] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [precio, setPrecio] = useState("");
-  const [tiempo, setTiempo] = useState("");
+  const [nombre, setNombre] = useState(producto?.nombre ?? "");
+  const [descripcion, setDescripcion] = useState(producto?.descripcion ?? "");
+  const [precio, setPrecio] = useState(
+    producto ? String(producto.precio) : "",
+  );
+  const [tiempo, setTiempo] = useState(
+    producto ? String(producto.tiempoPreparacionMin) : "",
+  );
+
+  /*
+   * La anticipación se elige, no se deduce.
+   *
+   * Antes salía de `Number(tiempo) >= 3`: una constante que no era el t_mín de
+   * nadie. Una bebida de 1 minuto entraba como "solo mostrador" sin que el
+   * comercio lo decidiera ni se enterara, y no había forma de que alguien la
+   * reservara junto con su comida.
+   *
+   * `tocado` es lo que permite sugerir sin imponer: mientras nadie toque el
+   * interruptor, sigue al tiempo que se está escribiendo —que es la ayuda que
+   * el comercio quiere mientras teclea—; en cuanto lo tocan, deja de moverse
+   * solo. Un valor que se recoloca después de que lo elegiste es un valor que
+   * no elegiste.
+   */
+  const [tocado, setTocado] = useState(producto !== null);
+  const [anticipable, setAnticipable] = useState(producto?.anticipable ?? true);
+  const sugerido = tiempo !== "" && Number(tiempo) >= tiempoMin;
+  const anticipaEfectivo = tocado ? anticipable : sugerido;
+
   const [foto, setFoto] = useState<{
     blob: Blob;
     ancho: number;
@@ -422,36 +480,47 @@ function NuevoProducto({
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
+  /* El mismo aviso que muestra la ficha del producto, pero antes de guardar.
+     Que el sistema marque algo solo y a continuación te regañe por ello es
+     peor que no avisar. */
+  const inutil = anticipaEfectivo && tiempo !== "" && Number(tiempo) < tiempoMin;
+
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
     setEnviando(true);
     setError(null);
     try {
-      const creado = await api<{ id: string }>(
-        `/api/comercios/${slug}/productos`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            nombre,
-            descripcion: descripcion || null,
-            precio: Number(precio),
-            tiempoPreparacionMin: Number(tiempo),
-            anticipable: Number(tiempo) >= 3,
-            disponible: true,
-          }),
-        },
-      );
+      const campos = {
+        nombre,
+        descripcion: descripcion.trim() || null,
+        precio: Number(precio),
+        tiempoPreparacionMin: Number(tiempo),
+        anticipable: anticipaEfectivo,
+      };
+
+      const id = producto
+        ? (await api<{ id: string }>(
+            `/api/comercios/${slug}/productos/${producto.id}`,
+            { method: "PATCH", body: JSON.stringify(campos) },
+          ),
+          producto.id)
+        : (
+            await api<{ id: string }>(`/api/comercios/${slug}/productos`, {
+              method: "POST",
+              body: JSON.stringify({ ...campos, disponible: true }),
+            })
+          ).id;
 
       /*
-       * La foto se sube DESPUÉS de crear el producto, y su fallo no tumba el
-       * alta: el producto ya existe y sin foto se ve con su mosaico. Obligar a
+       * La foto se sube DESPUÉS de guardar, y su fallo no tumba la operación:
+       * el producto ya existe y sin foto se ve con su mosaico. Obligar a
        * repetir el formulario entero porque la imagen no subió sería castigar
        * al comercio por un problema de red.
        */
       if (foto) {
         try {
           await fetch(
-            `/api/comercios/${slug}/productos/${creado.id}/imagen?ancho=${foto.ancho}&alto=${foto.alto}`,
+            `/api/comercios/${slug}/productos/${id}/imagen?ancho=${foto.ancho}&alto=${foto.alto}`,
             {
               method: "PUT",
               headers: { "content-type": "image/webp" },
@@ -463,7 +532,7 @@ function NuevoProducto({
         }
       }
 
-      onCreado();
+      onGuardado();
     } catch (err) {
       setError(textoDeError(err));
       setEnviando(false);
@@ -471,12 +540,14 @@ function NuevoProducto({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-tinta/45 backdrop-blur-sm sm:items-center sm:p-5">
+    <div className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-tinta/45 backdrop-blur-sm sm:items-center sm:p-5">
       <form
         onSubmit={guardar}
         className="entra w-full max-w-md rounded-t-lg bg-papel-alto p-5 sm:rounded-lg"
       >
-        <h2 className="titulo text-2xl">Nuevo producto</h2>
+        <h2 className="titulo text-2xl">
+          {producto ? "Editar producto" : "Nuevo producto"}
+        </h2>
         <p className="mt-1 text-sm text-tinta-suave">
           El tiempo de preparación no es un adorno: es lo que el sistema usa para
           decidir cuántos pedidos caben en cada hora. Medilo con cronómetro.
@@ -491,7 +562,7 @@ function NuevoProducto({
           />
           <SelectorFoto
             nombre={nombre}
-            urlActual={null}
+            urlActual={producto?.imagenUrl ?? null}
             onElegir={setFoto}
             onQuitar={() => setFoto(null)}
           />
@@ -511,6 +582,37 @@ function NuevoProducto({
               requerido
             />
           </div>
+
+          <fieldset className="rounded-sm border border-borde p-3">
+            <legend className="etiqueta px-1">Cómo se pide</legend>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={anticipaEfectivo}
+                onChange={(e) => {
+                  setTocado(true);
+                  setAnticipable(e.target.checked);
+                }}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-marca)]"
+              />
+              <span className="text-sm">
+                <span className="font-semibold">Se puede reservar con anticipación</span>
+                <span className="mt-0.5 block text-tinta-suave">
+                  Apagalo para lo que se despacha en el momento y no tiene
+                  sentido reservar. Sigue apareciendo en el menú, pero solo se
+                  pide en el mostrador.
+                </span>
+              </span>
+            </label>
+
+            {inutil && (
+              <p className="mt-2 rounded-sm bg-brasa-claro px-2 py-1.5 text-[0.6875rem]">
+                Se prepara en menos de {tiempoMin} min, que es el mínimo para
+                anticipar en este comercio: va a aparecer en el menú, pero nadie
+                va a poder reservarlo hasta que subas ese mínimo.
+              </p>
+            )}
+          </fieldset>
         </div>
 
         {error && (
@@ -532,7 +634,7 @@ function NuevoProducto({
             disabled={enviando}
             className="presiona brillo flex-1 rounded-full bg-marca-fondo px-6 py-3 font-semibold text-white disabled:opacity-40"
           >
-            {enviando ? "Guardando…" : "Agregar"}
+            {enviando ? "Guardando…" : producto ? "Guardar cambios" : "Agregar"}
           </button>
         </div>
       </form>
