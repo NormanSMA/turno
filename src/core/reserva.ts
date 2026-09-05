@@ -26,6 +26,7 @@ import {
   type ParametrosComercio,
   type MotivoRechazo,
 } from "./admision";
+import { ALFABETO_CODIGO, LARGO_CODIGO } from "./codigo-retiro";
 import { ESTADOS_ACTIVOS } from "./estados";
 
 export interface SolicitudPedido {
@@ -73,11 +74,11 @@ export interface PedidoNoAdmitido {
 
 export type ResultadoReserva = PedidoAdmitido | PedidoNoAdmitido;
 
-const ALFABETO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
 function codigoRetiro(): string {
-  // Código corto legible en el mostrador. Sin ambigüedad visual (0/O, 1/I).
-  const bytes = new Uint8Array(6);
+  // Código corto legible en el mostrador. El alfabeto y su comparación viven
+  // juntos en `codigo-retiro.ts`: quien compare tiene que saber qué
+  // caracteres se excluyeron y por qué.
+  const bytes = new Uint8Array(LARGO_CODIGO);
   crypto.getRandomValues(bytes);
   let s = "";
   for (const b of bytes) s += ALFABETO_CODIGO[b % ALFABETO_CODIGO.length];
