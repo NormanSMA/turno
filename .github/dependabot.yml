@@ -1,0 +1,40 @@
+# Dependabot: avisa de dependencias con vulnerabilidades conocidas y propone la
+# actualización que las corrige.
+#
+# Es la otra mitad del análisis: CodeQL mira el código que se escribió acá,
+# Dependabot mira el que se instaló. La mayoría de los agujeros de una aplicación
+# web vienen de lo segundo.
+#
+# Las actualizaciones se agrupan a propósito. Sin agrupar, una semana normal
+# abre diez pull requests que nadie revisa y terminan cerrándose en bloque
+# —y con ellas, la de seguridad que sí importaba—.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Lo de desarrollo se actualiza junto: no llega al usuario, así que el
+      # riesgo de agruparlo es bajo y el ahorro de ruido es alto.
+      desarrollo:
+        dependency-type: development
+      # Lo de producción, por versión: los parches se revisan de un vistazo,
+      # y un salto de versión mayor merece su propio pull request y su prueba.
+      produccion-parches:
+        dependency-type: production
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  # Las propias acciones de GitHub también se versionan y también tienen fallos.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(ci)"

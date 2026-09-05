@@ -1,0 +1,55 @@
+# Análisis de seguridad del código con CodeQL.
+#
+# CodeQL busca patrones de vulnerabilidad reales —inyección SQL, XSS, redirección
+# abierta, datos que van de una entrada del usuario a una operación peligrosa sin
+# pasar por validación— siguiendo el flujo de los datos a través del código. No es
+# un linter de estilo: cada alerta trae la ruta que sigue el dato desde donde
+# entra hasta donde hace daño.
+#
+# En un repositorio público es gratuito, igual que Copilot Autofix, que propone el
+# arreglo de cada alerta como un cambio que se puede revisar antes de aceptar.
+#
+# Se ejecuta en cada push a `main`, en cada pull request, y una vez por semana:
+# lo semanal importa porque las reglas de CodeQL se actualizan, y un código que
+# hoy está limpio puede tener mañana una alerta que ayer nadie sabía buscar.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Lunes a las 6:00 UTC — medianoche en el campus.
+    - cron: "0 6 * * 1"
+
+jobs:
+  analizar:
+    name: Analizar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      # `security-events: write` es lo que deja publicar las alertas en la
+      # pestaña Security. Sin esto el análisis corre y no se ve en ningún lado.
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # `security-and-quality` añade a las reglas de seguridad las de
+          # calidad que suelen esconder fallos: comparaciones imposibles,
+          # promesas sin await, condiciones que nunca se cumplen.
+          queries: security-and-quality
+
+      - name: Analizar
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
