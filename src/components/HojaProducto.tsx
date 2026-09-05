@@ -142,9 +142,19 @@ export function HojaProducto({
           type="button"
           onClick={() => dialogo.current?.close()}
           aria-label="Cerrar"
-          /* Oscuro y no claro: sobre una foto de comida —casi siempre clara y
-             con mucho detalle— un círculo blanco se pierde. */
-          className="toque absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/65"
+          /*
+           * Oscuro y no claro: sobre una foto de comida —casi siempre clara y
+           * con mucho detalle— un círculo blanco se pierde.
+           *
+           * **Sin `.toque`, y con 44 px de verdad.** `.toque` da el área táctil
+           * con un `::after`, pero para colocarlo se pone `position: relative`
+           * sobre el elemento — y eso pisa el `absolute`. El botón dejaba de
+           * estar anclado, caía al flujo del documento y aparecía a la
+           * izquierda, medio cortado por el borde de la hoja. Cuando el área
+           * táctil hace falta sobre algo posicionado, se consigue con el tamaño
+           * real del botón, no con la clase.
+           */
+          className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/65"
         >
           <Icono nombre="cerrar" size={18} />
         </button>

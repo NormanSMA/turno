@@ -167,7 +167,43 @@ export function analizar(): Hallazgo[] {
         }
       }
 
-      // 4 — emojis
+      /*
+       * 4 — `.toque` sobre un elemento posicionado
+       *
+       * `.toque` da el área táctil de 44 px con un `::after`, y para colocarlo
+       * necesita poner `position: relative` en el elemento. Eso pisa cualquier
+       * `absolute`, `fixed` o `sticky` que lleve al lado: el elemento deja de
+       * estar anclado y cae al flujo del documento.
+       *
+       * La regla existe porque este fallo ya se cometió TRES veces —el ojo de
+       * la contraseña, y la X de la hoja de producto, que apareció a la
+       * izquierda medio cortada—. Es una trampa del propio sistema: las dos
+       * clases son razonables por separado y nada avisa de que se anulan.
+       *
+       * Sobre algo posicionado, el área táctil se consigue con el tamaño real
+       * (`h-11 w-11`), no con la clase.
+       */
+      if (!eximido(rel, "toque-posicionado")) {
+        for (const m of codigo.matchAll(/className=[`"']([^`"']*)/g)) {
+          const clases = m[1].split(/\s+/);
+          if (!clases.includes("toque")) continue;
+          const choque = clases.find((c) =>
+            /^(?:absolute|fixed|sticky|[a-z]+:(?:absolute|fixed|sticky))$/.test(c),
+          );
+          if (choque) {
+            hallazgos.push({
+              archivo: rel,
+              linea: n,
+              regla: "toque-posicionado",
+              texto: `toque + ${choque}`,
+              detalle:
+                "`.toque` fuerza position:relative y anula el posicionamiento; usar h-11 w-11",
+            });
+          }
+        }
+      }
+
+      // 5 — emojis
       if (!eximido(rel, "sin-emojis")) {
         for (const m of linea.matchAll(/[\u{1F000}-\u{1FAFF}]|\u{FE0F}/gu)) {
           hallazgos.push({
