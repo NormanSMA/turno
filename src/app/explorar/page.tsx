@@ -24,7 +24,24 @@ export default async function Pagina() {
     orderBy: { nombre: "asc" },
     include: {
       productos: {
-        where: { archivado: false },
+        /*
+         * Solo lo que se puede reservar.
+         *
+         * Explorar existe para decidir qué pedir con anticipación. Una botella
+         * de agua o una gaseosa no se reservan —se toman del refrigerador al
+         * llegar—, así que acá solo ocupaban sitio y llevaban a un callejón:
+         * la tarjeta invitaba a tocarla y la hoja respondía "solo en el
+         * mostrador". Ofrecer algo y negarlo un toque después es peor que no
+         * ofrecerlo.
+         *
+         * Siguen estando en el menú de su comercio, en la sección de mostrador
+         * que ya existe, que es donde tienen sentido: ahí se ven junto a lo que
+         * sí se está pidiendo y se recogen en el mismo viaje.
+         *
+         * La portada ya filtraba así; era esta pantalla la que se había
+         * quedado atrás.
+         */
+        where: { archivado: false, anticipable: true },
         orderBy: { nombre: "asc" },
       },
     },

@@ -142,7 +142,9 @@ const FOTOS: Record<Foto, string[]> = {
   ],
   jugo: ["photo-1600271886742-f049cd451bba"],
   agua: ["photo-1548839140-29a749e1cf4d"],
-  isotonica: ["photo-1622543925917-763c34d1a86e", "photo-1523362628745-0c100150b504"],
+  /* La segunda era una botella de agua transparente y le tocaba al Gatorade:
+     la tarjeta decía "Gatorade" sobre una foto de agua. */
+  isotonica: ["photo-1622543925917-763c34d1a86e", "photo-1595981267035-7b04ca84a82d"],
   te: ["photo-1556679343-c7306c1976bc"],
 };
 
