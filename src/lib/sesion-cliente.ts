@@ -82,3 +82,39 @@ export function useSesion(): Sesion | null {
   }, []);
   return sesion;
 }
+
+/**
+ * Cierra la sesión y devuelve al inicio.
+ *
+ * Vive acá y no en la pantalla de perfil porque hay más de un sitio desde donde
+ * se sale —el perfil del cliente y el panel del comercio— y de las dos copias
+ * la que menos se usa es la que se queda sin el borrado de caché el día que
+ * alguien lo cambie en la otra.
+ *
+ * Tres cosas que tienen que pasar juntas y en este orden:
+ *
+ *   1. La petición al servidor, que invalida la sesión de verdad.
+ *   2. El borrado de la caché local, o el service worker seguiría sirviendo
+ *      pantallas con los datos de quien acaba de salir.
+ *   3. Una recarga COMPLETA, no `router.push`: la navegación de Next conserva
+ *      el árbol de React, y con él el estado del usuario anterior.
+ *
+ * El paso 2 va en `finally`: si la petición falla —sin red, por ejemplo— salir
+ * localmente sigue siendo lo correcto. Dejar la sesión abierta en el dispositivo
+ * porque el servidor no contestó es el peor de los dos resultados.
+ */
+export async function cerrarSesion(): Promise<void> {
+  const { api } = await import("./cliente");
+  const { borrarCacheLocal } = await import("./sw-cliente");
+  try {
+    await api("/api/auth/sesion", { method: "DELETE" });
+  } finally {
+    olvidarSesion();
+    await borrarCacheLocal();
+    // La regla pide `router.push` para navegar dentro de la aplicación. Acá se
+    // desactiva a propósito: es justo lo que NO se quiere, porque conserva el
+    // árbol de React con los datos de quien acaba de salir. Ver el punto 3.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/";
+  }
+}

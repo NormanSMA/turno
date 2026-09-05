@@ -24,7 +24,7 @@ import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { AvisosPush } from "@/components/AvisosPush";
 import { SelectorTema } from "@/components/SelectorTema";
 import { api, cordobas, ErrorApi } from "@/lib/cliente";
-import { borrarCacheLocal } from "@/lib/sw-cliente";
+import { cerrarSesion } from "@/lib/sesion-cliente";
 
 interface Perfil {
   correo: string;
@@ -75,15 +75,7 @@ export default function Pagina() {
 
   async function salir() {
     setSaliendo(true);
-    try {
-      await api("/api/auth/sesion", { method: "DELETE" });
-    } finally {
-      await borrarCacheLocal();
-      // Recarga completa a propósito: `router.push` conservaría el árbol de
-      // React, y con él los datos del usuario anterior.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.href = "/";
-    }
+    await cerrarSesion();
   }
 
   return (

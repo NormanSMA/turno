@@ -1,14 +1,12 @@
-import { Informe } from "./Informe";
-
-export const dynamic = "force-dynamic";
+import { redirect } from "next/navigation";
 
 /**
- * Informe de ventas del comercio.
+ * El informe vive dentro del panel, en su pestaña.
  *
- * Página de servidor mínima a propósito: todo el trabajo lo hace el endpoint,
- * que ya resuelve la autorización. Si esta página consultara la base por su
- * cuenta habría dos lugares donde comprobar de quién es el comercio, y tarde o
- * temprano uno de los dos se olvida.
+ * Esta ruta se conserva como redirección y no se borra porque estaba enlazada
+ * desde la cabecera del panel y puede estar guardada en marcadores. Un 404 en
+ * una dirección que alguien usaba ayer es una regresión, aunque el contenido
+ * siga existiendo dos clics más allá.
  */
 export default async function Pagina({
   params,
@@ -16,5 +14,5 @@ export default async function Pagina({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  return <Informe slug={slug} />;
+  redirect(`/comercio/${slug}?ver=informe`);
 }

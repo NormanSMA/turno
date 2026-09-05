@@ -15,15 +15,22 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CodigoPedido } from "@/components/CodigoPedido";
 import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { ImagenProducto } from "@/components/ImagenProducto";
 import {
-  AccionCabecera,
   AccionPrincipal,
   CabeceraOperacion,
 } from "@/components/CabeceraOperacion";
+import { Informe } from "./informe/Informe";
+import { Icono } from "@/components/iconos";
+import { SelectorTema } from "@/components/SelectorTema";
+import {
+  cerrarSesion,
+  sesionCliente,
+  type Sesion,
+} from "@/lib/sesion-cliente";
 import { SelectorFoto } from "@/components/SelectorFoto";
 import { api, cordobas, ErrorApi, fechaCorta, horaCorta } from "@/lib/cliente";
 
@@ -72,7 +79,23 @@ interface Estado {
   franjas: FranjaAdmin[];
 }
 
-type Pestana = "catalogo" | "franjas" | "ajustes";
+/**
+ * Las secciones del panel, en el orden en que se usan: primero lo que se toca
+ * a diario, después lo que se configura una vez.
+ *
+ * Es una constante y no una lista dentro del JSX porque también decide qué
+ * valores de `?ver=` son válidos. Con la lista incrustada, agregar una pestaña
+ * y olvidarse de la validación deja una sección a la que no se puede enlazar.
+ */
+const PESTANAS = [
+  ["catalogo", "Catálogo"],
+  ["franjas", "Horas"],
+  ["informe", "Informe"],
+  ["ajustes", "Ajustes"],
+  ["cuenta", "Cuenta"],
+] as const;
+
+type Pestana = (typeof PESTANAS)[number][0];
 
 export default function Pagina({
   params,
@@ -83,7 +106,19 @@ export default function Pagina({
   const router = useRouter();
   const [estado, setEstado] = useState<Estado | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pestana, setPestana] = useState<Pestana>("catalogo");
+  /*
+   * La pestaña inicial puede venir en la dirección (`?ver=informe`).
+   *
+   * Lo usa la redirección desde `/comercio/[slug]/informe`, que era una página
+   * propia y ahora es esta pestaña: sin leer el parámetro, un marcador viejo
+   * llevaría al panel pero abriendo Catálogo, y parecería que el informe se
+   * perdió.
+   */
+  const busqueda = useSearchParams();
+  const pedida = busqueda.get("ver");
+  const [pestana, setPestana] = useState<Pestana>(
+    PESTANAS.some(([id]) => id === pedida) ? (pedida as Pestana) : "catalogo",
+  );
 
   const cargar = useCallback(() => {
     api<Estado>(`/api/comercios/${slug}/admin`)
@@ -120,24 +155,13 @@ export default function Pagina({
         etiqueta="Panel del comercio"
         titulo={estado?.comercio.nombre ?? "Cargando…"}
         acciones={
-          <>
-            <AccionCabecera href={`/comercio/${slug}/informe`}>
-              Ver informe
-            </AccionCabecera>
-            <AccionPrincipal href={`/cocina/${slug}`}>
-              Ir a la cocina
-            </AccionPrincipal>
-          </>
+          <AccionPrincipal href={`/cocina/${slug}`}>
+            Ir a la cocina
+          </AccionPrincipal>
         }
       >
         <nav className="mt-3 flex gap-1" aria-label="Secciones del panel">
-          {(
-            [
-              ["catalogo", "Catálogo"],
-              ["franjas", "Horas"],
-              ["ajustes", "Ajustes"],
-            ] as const
-          ).map(([id, texto]) => (
+          {PESTANAS.map(([id, texto]) => (
             <button
               key={id}
               type="button"
@@ -172,6 +196,10 @@ export default function Pagina({
         {estado && pestana === "ajustes" && (
           <Ajustes estado={estado} slug={slug} onCambio={cargar} />
         )}
+
+        {pestana === "informe" && <Informe slug={slug} />}
+
+        {pestana === "cuenta" && <Cuenta />}
       </div>
     </main>
   );
@@ -296,6 +324,66 @@ function Catalogo({
         />
       )}
     </section>
+  );
+}
+
+/**
+ * La cuenta del comercio, dentro del panel.
+ *
+ * Estaba solo en la pantalla de Perfil, que es la del cliente: para cerrar
+ * sesión o cambiar el tema, el comercio tenía que salir a un sitio lleno de
+ * "Explorar", "Favoritos" y "Mis pedidos" que no son suyos. Y desde que las
+ * pantallas de operación dejaron de montar la navegación del cliente, ni
+ * siquiera había cómo llegar: había que escribir la dirección a mano.
+ *
+ * Acá va lo que un comercio sí necesita de su cuenta y nada más. Los datos de
+ * actividad —pedidos, favoritos— siguen donde estaban, porque pertenecen a
+ * quien pide, no a quien despacha.
+ */
+function Cuenta() {
+  const [sesion, setSesion] = useState<Sesion | null>(null);
+  const [saliendo, setSaliendo] = useState(false);
+
+  useEffect(() => {
+    sesionCliente()
+      .then(setSesion)
+      .catch(() => setSesion(null));
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-lg space-y-4">
+      <section className="tarjeta p-4">
+        <p className="etiqueta">Sesión</p>
+        <p className="mt-1 break-all font-semibold">
+          {sesion?.usuario?.correo ?? "…"}
+        </p>
+        <p className="text-sm text-tinta-suave">
+          Cuenta de operación del comercio
+        </p>
+      </section>
+
+      <section className="tarjeta p-4">
+        <p className="etiqueta">Apariencia</p>
+        <p className="mt-1 mb-3 text-sm text-tinta-suave">
+          El tema es de este dispositivo. La tablet del mostrador y la del fondo
+          no tienen por qué querer lo mismo.
+        </p>
+        <SelectorTema />
+      </section>
+
+      <button
+        type="button"
+        disabled={saliendo}
+        onClick={() => {
+          setSaliendo(true);
+          void cerrarSesion();
+        }}
+        className="presiona toque flex w-full items-center justify-center gap-2 rounded-full border border-borde px-6 py-3 font-semibold disabled:opacity-40"
+      >
+        <Icono nombre="salir" size={18} />
+        {saliendo ? "Cerrando sesión…" : "Cerrar sesión"}
+      </button>
+    </div>
   );
 }
 

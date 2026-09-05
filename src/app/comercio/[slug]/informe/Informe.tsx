@@ -13,11 +13,6 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  AccionCabecera,
-  AccionPrincipal,
-  CabeceraOperacion,
-} from "@/components/CabeceraOperacion";
 import { Icono } from "@/components/iconos";
 import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { NumeroAnimado } from "@/components/NumeroAnimado";
@@ -44,6 +39,15 @@ const PERIODOS = [
   { dias: 30, texto: "30 días" },
 ];
 
+/**
+ * El informe se dibuja DENTRO del panel, sin cabecera ni `<main>` propios.
+ *
+ * Era una pantalla aparte y eso obligaba al comercio a salir del panel para
+ * mirar sus ventas y volver para actuar sobre ellas — dos sitios para una sola
+ * conversación ("¿cómo voy?" / "entonces cambio esto"). Ahora es una pestaña
+ * más, y por eso este componente no monta contenedor: el panel ya pone el suyo,
+ * y dos anidados descuadran los anchos.
+ */
 export function Informe({ slug }: { slug: string }) {
   const [dias, setDias] = useState(7);
   const [d, setD] = useState<Datos | null>(null);
@@ -69,25 +73,7 @@ export function Informe({ slug }: { slug: string }) {
   }, [cargar]);
 
   return (
-    <>
-      <CabeceraOperacion
-        etiqueta="Informe · ventas y operación"
-        titulo={d ? d.comercio.nombre : "Informe"}
-        acciones={
-          <>
-            <AccionCabecera href={`/comercio/${slug}`}>
-              Al panel
-            </AccionCabecera>
-            <AccionPrincipal href={`/cocina/${slug}`}>
-              Ir a la cocina
-            </AccionPrincipal>
-          </>
-        }
-      />
-      <main
-        id="contenido"
-        className="mx-auto w-full max-w-5xl px-4 pb-12 pt-6 sm:px-6"
-      >
+    <div>
 
         {/* Período. Va arriba porque un número sin período no significa nada. */}
         <div
@@ -294,8 +280,7 @@ export function Informe({ slug }: { slug: string }) {
             </section>
           </>
         )}
-      </main>
-    </>
+    </div>
   );
 }
 
