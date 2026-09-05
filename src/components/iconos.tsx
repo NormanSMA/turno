@@ -46,7 +46,8 @@ export type NombreIcono =
   | "luna"
   | "corazon"
   | "ojo"
-  | "ojo-cerrado";
+  | "ojo-cerrado"
+  | "camara";
 
 /**
  * Los trazos, sueltos, para poder pasarlos a `MorphIcon` sin arrastrar el
@@ -97,6 +98,10 @@ export const TRAZOS: Record<NombreIcono, string[]> = {
   ojo: [
     "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z",
     "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
+  ],
+  camara: [
+    "M3 8a2 2 0 0 1 2-2h2.2l1.3-2h6.6l1.3 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z",
+    "M12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z",
   ],
   "ojo-cerrado": [
     "M3 3l18 18",

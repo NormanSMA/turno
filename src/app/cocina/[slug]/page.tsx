@@ -17,6 +17,8 @@ import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CodigoPedido } from "@/components/CodigoPedido";
+import { EscanerRetiro } from "@/components/EscanerRetiro";
+import { mismoCodigo, normalizarCodigo, pareceCompleto } from "@/core/codigo-retiro";
 import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { prioridadCocina } from "@/core/urgencia";
 import { proximoCuello } from "@/core/cuello";
@@ -308,6 +310,14 @@ export default function Pagina({
       </header>
 
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6">
+        {tablero && (
+          <BuscarPedido
+            pedidos={tablero.pedidos}
+            ocupado={ocupado}
+            onAvanzar={avanzar}
+          />
+        )}
+
         {tablero && <AvisoCuello pedidos={tablero.pedidos} ahora={ahora} />}
 
         {tablero && tablero.franjas.length > 0 && (
@@ -383,6 +393,138 @@ export default function Pagina({
  * lo que la cocina todavía puede actuar. Calla mientras hay holgura — a quien
  * se le avisa siempre, deja de mirar.
  */
+/**
+ * Buscar un pedido por su código, escaneando o escribiendo.
+ *
+ * ## Por qué las dos vías terminan en el mismo sitio
+ *
+ * El QR del estudiante lleva **el mismo código** que está impreso debajo en
+ * grande, no una URL ni un identificador interno. Así que escanear no es un
+ * camino de entrega aparte: es una forma rápida de rellenar este campo. Si
+ * fueran dos caminos hacia el estado RETIRADO, acabarían comportándose
+ * distinto, y el que menos se usa es el que se rompe sin que nadie lo note.
+ *
+ * ## Por qué no filtra el tablero
+ *
+ * Buscar muestra el pedido encontrado **encima** del tablero, sin tocar las
+ * columnas. En el mostrador se está confirmando un pedido concreto mientras la
+ * cocina sigue trabajando detrás; reorganizar el tablero por una búsqueda le
+ * cambiaría la pantalla a quien está cocinando.
+ */
+function BuscarPedido({
+  pedidos,
+  ocupado,
+  onAvanzar,
+}: {
+  pedidos: PedidoCocina[];
+  ocupado: string | null;
+  onAvanzar: (p: PedidoCocina, hacia: EstadoPedido) => void;
+}) {
+  const [codigo, setCodigo] = useState("");
+  const [escaneando, setEscaneando] = useState(false);
+
+  const encontrado =
+    normalizarCodigo(codigo).length >= 3
+      ? (pedidos.find((p) => mismoCodigo(p.codigo, codigo)) ?? null)
+      : null;
+  // Solo se declara "no está" con el código completo. Mientras se teclea, la
+  // mitad de un código no encuentra nada, y eso no es un fallo que reportar.
+  const sinResultado = pareceCompleto(codigo) && !encontrado;
+
+  const accion = encontrado
+    ? COLUMNAS.find((c) => c.estado === encontrado.estado)?.accion
+    : undefined;
+
+  return (
+    <section className="mb-4 rounded-lg bg-papel-alto p-3">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="min-w-0 flex-1">
+          <span className="etiqueta">Código del pedido</span>
+          <input
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value)}
+            /* `characters`, no `words`: el código no son palabras y el teclado
+               del móvil pondría mayúscula solo en la primera. */
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="ABC-DEF"
+            aria-label="Buscar un pedido por su código de retiro"
+            className="hora mt-1 w-full rounded-sm border border-borde bg-papel-alto px-3 py-2.5 text-lg font-semibold uppercase tracking-widest outline-none focus:border-marca-texto"
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={() => setEscaneando(true)}
+          className="presiona toque flex items-center gap-2 rounded-full bg-marca-fondo px-5 py-2.5 font-semibold text-white"
+        >
+          <Icono nombre="camara" size={18} />
+          Escanear
+        </button>
+
+        {codigo !== "" && (
+          <button
+            type="button"
+            onClick={() => setCodigo("")}
+            className="presiona toque rounded-full border border-borde px-4 py-2.5 text-sm font-medium text-tinta-suave"
+          >
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      {encontrado && (
+        <div className="entra mt-3 rounded-md border-2 border-marca-texto p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <CodigoPedido codigo={encontrado.codigo} tamano="lg" />
+              <p className="mt-1 text-sm text-tinta-suave">
+                {encontrado.items
+                  .map((i) => `${i.cantidad}× ${i.nombre}`)
+                  .join(" · ")}
+              </p>
+            </div>
+
+            {accion && (
+              <button
+                type="button"
+                disabled={ocupado === encontrado.id}
+                onClick={() => {
+                  onAvanzar(encontrado, accion.hacia);
+                  // Se limpia al actuar: en el mostrador viene otro detrás, y
+                  // dejar el código puesto invita a tocar dos veces el mismo.
+                  setCodigo("");
+                }}
+                className="presiona brillo rounded-full bg-marca-fondo px-6 py-3 font-semibold text-white disabled:opacity-40"
+              >
+                {ocupado === encontrado.id ? "Guardando…" : accion.texto}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {sinResultado && (
+        <p role="status" className="mt-3 rounded-sm bg-brasa-claro px-3 py-2 text-sm">
+          Ese código no está en la cola. Puede que ya se haya entregado, que sea
+          de otro comercio, o que esté mal escrito.
+        </p>
+      )}
+
+      {escaneando && (
+        <EscanerRetiro
+          onLeer={(texto) => {
+            setCodigo(texto);
+            setEscaneando(false);
+          }}
+          onCerrar={() => setEscaneando(false)}
+        />
+      )}
+    </section>
+  );
+}
+
 function AvisoCuello({
   pedidos,
   ahora,
