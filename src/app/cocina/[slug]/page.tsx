@@ -33,7 +33,7 @@ import {
   vibrarPedidoNuevo,
 } from "@/lib/sonido";
 import { IconoEstado, type EstadoPedido } from "@/components/IconoEstado";
-import { MarcaTurno } from "@/components/marca";
+import { CabeceraOperacion } from "@/components/CabeceraOperacion";
 import { api, ErrorApi, fechaCorta, horaCorta } from "@/lib/cliente";
 import { conTransicionDeVista } from "@/lib/movimiento";
 
@@ -245,69 +245,67 @@ export default function Pagina({
 
   return (
     <main className="min-h-dvh bg-papel-medio">
-      <header className="border-b border-borde bg-papel-alto">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <MarcaTurno size={34} />
-          <div className="min-w-0">
-            <p className="etiqueta">Cocina</p>
-            <h1 className="titulo truncate text-2xl">
-              {tablero?.comercio.nombre ?? "Cargando…"}
-            </h1>
-          </div>
+      <CabeceraOperacion
+        etiqueta="Cocina"
+        titulo={tablero?.comercio.nombre ?? "Cargando…"}
+        ancho="max-w-7xl"
+        acciones={
+          <>
+              {pausado && tablero && (
+                <span className="rounded-full bg-brasa-claro px-3 py-1 text-xs font-semibold">
+                  Pedidos pausados
+                </span>
+              )}
 
-          {pausado && tablero && (
-            <span className="rounded-full bg-brasa-claro px-3 py-1 text-xs font-semibold">
-              Pedidos pausados
-            </span>
-          )}
+              {/* El interruptor va en la cabecera y no en ajustes: el ambiente de
+                  una cocina cambia durante el día, y una preferencia que hay que ir
+                  a buscar no se cambia — se aguanta o se apaga el volumen entero
+                  del dispositivo, que es peor. */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={sonido}
+                onClick={() => {
+                  const nuevo = !sonido;
+                  // El clic ES el gesto que los navegadores exigen para permitir
+                  // audio: el contexto se crea acá o el primer aviso no suena.
+                  if (nuevo) despertarAudio();
+                  guardarSonido(nuevo);
+                  if (nuevo) sonarPedidoNuevo();
+                }}
+                className={`presiona ml-auto flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium ${
+                  sonido ? "border-marca-texto bg-turno-claro text-marca-texto" : "border-borde"
+                }`}
+              >
+                <Icono nombre="campana" size={16} />
+                {sonido ? "Sonido activado" : "Sonido apagado"}
+              </button>
 
-          {/* El interruptor va en la cabecera y no en ajustes: el ambiente de
-              una cocina cambia durante el día, y una preferencia que hay que ir
-              a buscar no se cambia — se aguanta o se apaga el volumen entero
-              del dispositivo, que es peor. */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={sonido}
-            onClick={() => {
-              const nuevo = !sonido;
-              // El clic ES el gesto que los navegadores exigen para permitir
-              // audio: el contexto se crea acá o el primer aviso no suena.
-              if (nuevo) despertarAudio();
-              guardarSonido(nuevo);
-              if (nuevo) sonarPedidoNuevo();
-            }}
-            className={`presiona ml-auto flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium ${
-              sonido ? "border-marca-texto bg-turno-claro text-marca-texto" : "border-borde"
-            }`}
-          >
-            <Icono nombre="campana" size={16} />
-            {sonido ? "Sonido activado" : "Sonido apagado"}
-          </button>
+              <Link
+                href={`/comercio/${slug}`}
+                className="presiona rounded-full border border-borde px-4 py-2 text-sm font-medium"
+              >
+                Panel
+              </Link>
 
-          <Link
-            href={`/comercio/${slug}`}
-            className="presiona rounded-full border border-borde px-4 py-2 text-sm font-medium"
-          >
-            Panel
-          </Link>
+              <p
+                className="hora w-full text-xs text-tinta-suave sm:w-auto"
+                aria-live="polite"
+              >
+                {desconectado ? (
+                  <span className="text-brasa">
+                    Sin conexión · mostrando la última cola conocida
+                  </span>
+                ) : tablero ? (
+                  `Actualizado ${horaCorta(tablero.generadoEn)}`
+                ) : (
+                  ""
+                )}
+              </p>
 
-          <p
-            className="hora w-full text-xs text-tinta-suave sm:w-auto"
-            aria-live="polite"
-          >
-            {desconectado ? (
-              <span className="text-brasa">
-                Sin conexión · mostrando la última cola conocida
-              </span>
-            ) : tablero ? (
-              `Actualizado ${horaCorta(tablero.generadoEn)}`
-            ) : (
-              ""
-            )}
-          </p>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6">
         {tablero && (

@@ -13,8 +13,11 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { Navegacion } from "@/components/Navegacion";
+import {
+  AccionCabecera,
+  AccionPrincipal,
+  CabeceraOperacion,
+} from "@/components/CabeceraOperacion";
 import { Icono } from "@/components/iconos";
 import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { NumeroAnimado } from "@/components/NumeroAnimado";
@@ -67,24 +70,24 @@ export function Informe({ slug }: { slug: string }) {
 
   return (
     <>
-      <Navegacion comercioSlug={slug} />
+      <CabeceraOperacion
+        etiqueta="Informe · ventas y operación"
+        titulo={d ? d.comercio.nombre : "Informe"}
+        acciones={
+          <>
+            <AccionCabecera href={`/comercio/${slug}`}>
+              Al panel
+            </AccionCabecera>
+            <AccionPrincipal href={`/cocina/${slug}`}>
+              Ir a la cocina
+            </AccionPrincipal>
+          </>
+        }
+      />
       <main
         id="contenido"
-        className="mx-auto w-full max-w-4xl px-4 pb-28 pt-6 sm:px-5 sm:pb-12"
+        className="mx-auto w-full max-w-5xl px-4 pb-12 pt-6 sm:px-6"
       >
-        <header className="mb-5">
-          <Link
-            href={`/comercio/${slug}`}
-            className="etiqueta inline-flex items-center gap-1.5 hover:text-texto"
-          >
-            <Icono nombre="atras" size={14} />
-            Mi comercio
-          </Link>
-          <h1 className="titulo mt-2 text-h1">
-            {d ? d.comercio.nombre : "Informe"}
-          </h1>
-          <p className="text-chico text-texto-2">Ventas y operación</p>
-        </header>
 
         {/* Período. Va arriba porque un número sin período no significa nada. */}
         <div

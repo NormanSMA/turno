@@ -19,7 +19,11 @@ import { useRouter } from "next/navigation";
 import { CodigoPedido } from "@/components/CodigoPedido";
 import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { ImagenProducto } from "@/components/ImagenProducto";
-import { MarcaTurno } from "@/components/marca";
+import {
+  AccionCabecera,
+  AccionPrincipal,
+  CabeceraOperacion,
+} from "@/components/CabeceraOperacion";
 import { SelectorFoto } from "@/components/SelectorFoto";
 import { api, cordobas, ErrorApi, fechaCorta, horaCorta } from "@/lib/cliente";
 
@@ -112,57 +116,44 @@ export default function Pagina({
 
   return (
     <main className="min-h-dvh bg-papel-medio">
-      <header className="border-b border-borde bg-papel-alto">
-        <div className="mx-auto w-full max-w-5xl px-4 py-3 sm:px-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <MarcaTurno size={34} />
-            <div className="min-w-0">
-              <p className="etiqueta">Panel del comercio</p>
-              <h1 className="titulo truncate text-2xl">
-                {estado?.comercio.nombre ?? "Cargando…"}
-              </h1>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Link
-                href={`/comercio/${slug}/informe`}
-                className="presiona rounded-full border border-borde px-4 py-2 text-sm font-medium"
-              >
-                Ver informe
-              </Link>
-              <Link
-                href={`/cocina/${slug}`}
-                className="presiona rounded-full bg-marca-fondo px-4 py-2 text-sm font-semibold text-white"
-              >
-                Ir a la cocina
-              </Link>
-            </div>
-          </div>
-
-          <nav className="mt-3 flex gap-1" aria-label="Secciones del panel">
-            {(
-              [
-                ["catalogo", "Catálogo"],
-                ["franjas", "Horas"],
-                ["ajustes", "Ajustes"],
-              ] as const
-            ).map(([id, texto]) => (
-              <button
-                key={id}
-                type="button"
-                aria-current={pestana === id ? "page" : undefined}
-                onClick={() => setPestana(id)}
-                className={`presiona rounded-full px-4 py-1.5 text-sm font-medium ${
-                  pestana === id
-                    ? "bg-marca-fondo text-white"
-                    : "text-tinta-suave hover:bg-turno-claro"
-                }`}
-              >
-                {texto}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </header>
+      <CabeceraOperacion
+        etiqueta="Panel del comercio"
+        titulo={estado?.comercio.nombre ?? "Cargando…"}
+        acciones={
+          <>
+            <AccionCabecera href={`/comercio/${slug}/informe`}>
+              Ver informe
+            </AccionCabecera>
+            <AccionPrincipal href={`/cocina/${slug}`}>
+              Ir a la cocina
+            </AccionPrincipal>
+          </>
+        }
+      >
+        <nav className="mt-3 flex gap-1" aria-label="Secciones del panel">
+          {(
+            [
+              ["catalogo", "Catálogo"],
+              ["franjas", "Horas"],
+              ["ajustes", "Ajustes"],
+            ] as const
+          ).map(([id, texto]) => (
+            <button
+              key={id}
+              type="button"
+              aria-current={pestana === id ? "page" : undefined}
+              onClick={() => setPestana(id)}
+              className={`presiona rounded-full px-4 py-1.5 text-sm font-medium ${
+                pestana === id
+                  ? "bg-marca-fondo text-white"
+                  : "text-tinta-suave hover:bg-turno-claro"
+              }`}
+            >
+              {texto}
+            </button>
+          ))}
+        </nav>
+      </CabeceraOperacion>
 
       <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
         {!estado && (
