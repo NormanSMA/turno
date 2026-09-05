@@ -35,17 +35,22 @@
  *
  * Esa diferencia es la que decide si anticipar vale la pena.
  *
- * ## Por qué `tiempoMinAnticipable` es bajo en todos
+ * ## Qué se reserva y qué se compra en el mostrador
  *
- * Para que una bebida pueda ir DENTRO del pedido. El motor rechaza el pedido
- * entero si alguno de sus productos no es elegible, y elegible exige
- * `tiempo >= t_mín`: con el umbral en 3, pedir una hamburguesa con su gaseosa
- * era imposible y había que comprar la bebida aparte en el mostrador.
+ * La línea no la marca el precio ni el tipo de producto: la marca **si hay algo
+ * que preparar**.
  *
- * Así que el umbral queda como piso técnico y la decisión real la lleva
- * `anticipable`, producto por producto, que además el comercio puede cambiar
- * desde el panel. Lo de impulso —una galleta, un chocobanano— sigue en
- * `false`: reservarlo no le ahorra tiempo a nadie.
+ *   - **Se reserva** lo que lleva trabajo, aunque sea poco: un chocobanano hay
+ *     que bañarlo y congelarlo, un helado hay que servirlo, un fresco hay que
+ *     hacerlo. Ahí anticipar ahorra espera de verdad.
+ *   - **Se compra en el mostrador** lo que solo se toma de una vitrina o un
+ *     refrigerador: el agua, las gaseosas, una galleta empacada. Reservarlo no
+ *     ahorra un segundo y ocupa franja, que es capacidad que se le quita a un
+ *     plato que sí hay que cocinar.
+ *
+ * `tiempoMinAnticipable` queda en 2 como piso técnico —por debajo no hay nada
+ * que anticipar— y la decisión real la lleva `anticipable`, producto por
+ * producto, que además el comercio puede cambiar desde el panel.
  */
 
 import "dotenv/config";
@@ -70,7 +75,7 @@ type Foto =
   | "sopa" | "hotdog" | "ensalada" | "arroz"
   | "espresso" | "cappuccino" | "frappe" | "limonada" | "matcha"
   | "batido" | "helado" | "frutas" | "galleta" | "pastel"
-  | "gaseosa" | "agua" | "isotonica" | "te";
+  | "gaseosa" | "agua" | "isotonica" | "te" | "jugo";
 
 interface ProductoSemilla {
   nombre: string;
@@ -84,26 +89,26 @@ interface ProductoSemilla {
 }
 
 /**
- * Las bebidas que se repiten en todos lados.
+ * Las bebidas embotelladas, iguales en todos los locales.
  *
- * Están en una constante porque son el mismo producto en ocho locales: escritas
- * ocho veces, el día que cambie el precio de la Coca-Cola habría que acordarse
- * de los ocho.
+ * Están en una constante porque son el mismo producto en diez sitios: escritas
+ * diez veces, el día que cambie el precio de la Coca-Cola habría que acordarse
+ * de los diez.
  *
- * Anticipables con 1 minuto: no cuesta prepararlas, pero tienen que poder
- * entrar en el pedido junto con la comida. Que alguien reserve su almuerzo y
- * tenga que hacer fila igual para la gaseosa es exactamente la espera que el
- * sistema existe para quitar.
+ * **Todas de mostrador.** No se preparan: se sacan del refrigerador al
+ * entregar. Reservarlas no le ahorra un segundo a nadie y en cambio ocuparía
+ * franja, que es capacidad que se le quita a un plato que sí hay que cocinar.
+ * Se recogen junto con el pedido, en el mismo mostrador y en el mismo viaje.
  */
 const BEBIDAS: ProductoSemilla[] = [
-  { nombre: "Coca-Cola 500 ml", precio: 35, min: 1, anticipable: true, foto: "gaseosa" },
-  { nombre: "Coca-Cola Zero 500 ml", precio: 35, min: 1, anticipable: true, foto: "gaseosa" },
-  { nombre: "Pepsi 500 ml", precio: 32, min: 1, anticipable: true, foto: "gaseosa" },
-  { nombre: "Agua purificada 600 ml", precio: 20, min: 1, anticipable: true, foto: "agua" },
-  { nombre: "Gatorade", descripcion: "Sabor según disponibilidad.", precio: 55, min: 1, anticipable: true, foto: "isotonica" },
-  { nombre: "Electrolit", descripcion: "Suero rehidratante.", precio: 85, min: 1, anticipable: true, foto: "isotonica" },
-  { nombre: "Hi-C", descripcion: "Jugo de naranja.", precio: 30, min: 1, anticipable: true, foto: "gaseosa" },
-  { nombre: "Té Lipton", descripcion: "Frío, en botella.", precio: 38, min: 1, anticipable: true, foto: "te" },
+  { nombre: "Coca-Cola 500 ml", precio: 35, min: 0, anticipable: false, foto: "gaseosa" },
+  { nombre: "Coca-Cola Zero 500 ml", precio: 35, min: 0, anticipable: false, foto: "gaseosa" },
+  { nombre: "Pepsi 500 ml", precio: 32, min: 0, anticipable: false, foto: "gaseosa" },
+  { nombre: "Agua purificada 600 ml", precio: 20, min: 0, anticipable: false, foto: "agua" },
+  { nombre: "Gatorade", descripcion: "Sabor según disponibilidad.", precio: 55, min: 0, anticipable: false, foto: "isotonica" },
+  { nombre: "Electrolit", descripcion: "Suero rehidratante.", precio: 85, min: 0, anticipable: false, foto: "isotonica" },
+  { nombre: "Hi-C", descripcion: "Jugo de naranja.", precio: 30, min: 0, anticipable: false, foto: "jugo" },
+  { nombre: "Té Lipton", descripcion: "Frío, en botella.", precio: 38, min: 0, anticipable: false, foto: "te" },
 ];
 
 interface ComercioSemilla {
@@ -126,14 +131,23 @@ interface ComercioSemilla {
 }
 
 /** t_mín para todos: ver el encabezado. */
-const T_MIN = 1;
+const T_MIN = 2;
 
+/*
+ * Las ubicaciones nombran UN punto de referencia, no un tramo.
+ *
+ * Decían cosas como "entre el campo de béisbol y el de fútbol", que describe un
+ * espacio de cien metros y no ayuda a decidir: el estudiante que tiene veinte
+ * minutos de receso necesita saber si le queda cerca, y "entre A y B" le deja
+ * la duda de en qué extremo. Cada una da ahora una referencia con la que se
+ * llega caminando de frente.
+ */
 const CAMPUS: ComercioSemilla[] = [
   /* ------------------------------------------------ Food court · planta baja */
   {
     slug: "subway",
     nombre: "Subway",
-    ubicacion: "Food court · planta baja",
+    ubicacion: "Food court · planta baja, a la entrada",
     correo: "subway@uamv.edu.ni",
     personalCocina: 2,
     anchoFranjaMin: 10,
@@ -179,7 +193,7 @@ const CAMPUS: ComercioSemilla[] = [
   {
     slug: "campestre-bonanza",
     nombre: "Campestre Bonanza",
-    ubicacion: "Food court · planta baja",
+    ubicacion: "Food court · planta baja, al fondo",
     correo: "bonanza@uamv.edu.ni",
     personalCocina: 2,
     anchoFranjaMin: 10,
@@ -200,7 +214,7 @@ const CAMPUS: ComercioSemilla[] = [
     slug: "heladeria-food-court",
     nombre: "Heladería del Food Court",
     nombreProvisional: true,
-    ubicacion: "Food court · planta baja",
+    ubicacion: "Food court · planta baja, junto a las gradas",
     correo: "heladeria@uamv.edu.ni",
     personalCocina: 1,
     anchoFranjaMin: 10,
@@ -208,7 +222,7 @@ const CAMPUS: ComercioSemilla[] = [
     cierra: "18:00",
     productos: [
       { nombre: "Helado de vaso · dos bolas", precio: 70, min: 2, anticipable: true, foto: "helado" },
-      { nombre: "Cono simple", precio: 50, min: 2, anticipable: false, foto: "helado" },
+      { nombre: "Cono simple", precio: 50, min: 2, anticipable: true, foto: "helado" },
       { nombre: "Sundae", descripcion: "Con salsa y topping a elección.", precio: 95, min: 3, anticipable: true, foto: "helado" },
       { nombre: "Banana split", precio: 135, min: 5, anticipable: true, foto: "helado" },
       { nombre: "Malteada de vainilla", precio: 110, min: 4, anticipable: true, foto: "batido" },
@@ -221,7 +235,7 @@ const CAMPUS: ComercioSemilla[] = [
   {
     slug: "espresso-americano",
     nombre: "Espresso Americano",
-    ubicacion: "Food court · segunda planta",
+    ubicacion: "Food court · segunda planta, subiendo a la derecha",
     correo: "espresso@uamv.edu.ni",
     personalCocina: 2,
     anchoFranjaMin: 10,
@@ -270,7 +284,7 @@ const CAMPUS: ComercioSemilla[] = [
       { nombre: "Jugo de naranja natural", precio: 70, min: 4, anticipable: true, foto: "limonada" },
       { nombre: "Ensalada de frutas", precio: 90, min: 5, anticipable: true, foto: "frutas" },
       { nombre: "Ensalada de frutas con yogur", precio: 110, min: 6, anticipable: true, foto: "frutas" },
-      { nombre: "Chocobanano", precio: 35, min: 0, anticipable: false, foto: "helado" },
+      { nombre: "Chocobanano", descripcion: "Banano bañado en chocolate, congelado.", precio: 35, min: 4, anticipable: true, foto: "helado" },
     ],
   },
 
@@ -278,7 +292,7 @@ const CAMPUS: ComercioSemilla[] = [
   {
     slug: "el-ranchito",
     nombre: "El Ranchito",
-    ubicacion: "Entre la clínica de odontología y la FIA",
+    ubicacion: "Frente a la FIA, a un costado de la clínica de odontología",
     correo: "ranchito@uamv.edu.ni",
     personalCocina: 2,
     anchoFranjaMin: 10,
@@ -299,7 +313,7 @@ const CAMPUS: ComercioSemilla[] = [
   {
     slug: "kiosko-jaguarcito",
     nombre: "Kiosko Jaguarcito",
-    ubicacion: "Entre el campo de béisbol y el de fútbol",
+    ubicacion: "Junto al campo de béisbol, del lado de las gradas",
     correo: "jaguarcito@uamv.edu.ni",
     personalCocina: 1,
     anchoFranjaMin: 10,
@@ -342,7 +356,7 @@ const CAMPUS: ComercioSemilla[] = [
     slug: "pupuseria-edificio-j",
     nombre: "Pupusería Edificio J",
     nombreProvisional: true,
-    ubicacion: "Costado derecho del edificio J",
+    ubicacion: "Costado derecho del edificio J, junto al puesto de pollo",
     correo: "pupusas@uamv.edu.ni",
     personalCocina: 1,
     anchoFranjaMin: 15,
@@ -354,7 +368,7 @@ const CAMPUS: ComercioSemilla[] = [
       { nombre: "Pupusa de frijol con queso", precio: 45, min: 8, anticipable: true, foto: "pupusa" },
       { nombre: "Pupusa de loroco", precio: 55, min: 9, anticipable: true, foto: "pupusa" },
       { nombre: "Orden de tres pupusas", descripcion: "A elección, con curtido.", precio: 130, min: 14, anticipable: true, foto: "pupusa" },
-      { nombre: "Curtido extra", precio: 20, min: 1, anticipable: true, foto: "ensalada" },
+      { nombre: "Curtido extra", descripcion: "Repollo curtido, se sirve con las pupusas.", precio: 20, min: 2, anticipable: true, foto: "ensalada" },
       { nombre: "Fresco natural", precio: 30, min: 2, anticipable: true, foto: "limonada" },
     ],
   },
