@@ -509,14 +509,24 @@ describe("barrido de vencidos", () => {
   });
 
   it("marca incumplido lo que sigue en preparación con la franja vencida", async () => {
-    const { pedido } = await pedidoBase();
+    const { pedido, franjas } = await pedidoBase();
     await cambiarEstado(prisma, {
       pedidoId: pedido.pedidoId,
       hacia: "EN_PREPARACION",
       actor: "COMERCIO",
     });
 
-    const r = await barrerVencidos(prisma, new Date("2026-09-02T00:00:00Z"));
+    /*
+     * El instante del barrido se deriva de la franja, no se escribe a mano.
+     *
+     * Acá había una fecha fija (`2026-09-02`). El escenario ya monta sus
+     * franjas relativas a `Date.now()`, así que al llegar ese día la fecha fija
+     * dejó de estar DESPUÉS del fin de la franja: la franja no vencía, no había
+     * nada que marcar, y la prueba empezó a fallar sola sin que nadie tocara el
+     * código que verifica.
+     */
+    const despues = new Date(franjas[0].fin.getTime() + 60_000);
+    const r = await barrerVencidos(prisma, despues);
     expect(r.incumplidos).toBe(1);
 
     const p = await prisma.pedido.findUniqueOrThrow({
