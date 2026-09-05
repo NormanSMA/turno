@@ -134,13 +134,21 @@ interface ComercioSemilla {
 const T_MIN = 2;
 
 /*
- * Las ubicaciones nombran UN punto de referencia, no un tramo.
+ * La ubicación se escribe "LUGAR · detalle", y ese formato NO es estético.
  *
- * Decían cosas como "entre el campo de béisbol y el de fútbol", que describe un
- * espacio de cien metros y no ayuda a decidir: el estudiante que tiene veinte
- * minutos de receso necesita saber si le queda cerca, y "entre A y B" le deja
- * la duda de en qué extremo. Cada una da ahora una referencia con la que se
- * llega caminando de frente.
+ * `zonaDe()` parte por el "·" y se queda con lo de la izquierda para saber qué
+ * comercios están juntos y marcar "acá cerca". Sin el separador, la zona pasa a
+ * ser la frase entera y cada local queda solo en una zona propia: la agrupación
+ * deja de existir y nada falla, que es lo que la hace fácil de romper.
+ *
+ * Los nombres son los que usa la gente, no una descripción. El puesto de pollo
+ * y el de pupusas están en el **Chilamate** —donde se reúnen los estudiantes—,
+ * y llamarlo "costado derecho del edificio J" obliga a traducir algo que ya
+ * tiene nombre.
+ *
+ * No hay metros ni minutos a propósito. El campus es chico, el GPS bajo techo
+ * falla, y "a 800 m" es un número que habría que calcular mal para decir algo
+ * que el nombre del lugar ya dice bien.
  */
 const CAMPUS: ComercioSemilla[] = [
   /* ------------------------------------------------ Food court · planta baja */
@@ -292,7 +300,7 @@ const CAMPUS: ComercioSemilla[] = [
   {
     slug: "el-ranchito",
     nombre: "El Ranchito",
-    ubicacion: "Frente a la FIA, a un costado de la clínica de odontología",
+    ubicacion: "El Ranchito · frente a la FIA",
     correo: "ranchito@uamv.edu.ni",
     personalCocina: 2,
     anchoFranjaMin: 10,
@@ -313,7 +321,7 @@ const CAMPUS: ComercioSemilla[] = [
   {
     slug: "kiosko-jaguarcito",
     nombre: "Kiosko Jaguarcito",
-    ubicacion: "Junto al campo de béisbol, del lado de las gradas",
+    ubicacion: "Canchas · junto al campo de béisbol",
     correo: "jaguarcito@uamv.edu.ni",
     personalCocina: 1,
     anchoFranjaMin: 10,
@@ -336,7 +344,7 @@ const CAMPUS: ComercioSemilla[] = [
     slug: "pollo-edificio-j",
     nombre: "Pollo Edificio J",
     nombreProvisional: true,
-    ubicacion: "Costado derecho del edificio J",
+    ubicacion: "Chilamate · costado del edificio J",
     correo: "polloj@uamv.edu.ni",
     personalCocina: 2,
     anchoFranjaMin: 15,
@@ -356,7 +364,7 @@ const CAMPUS: ComercioSemilla[] = [
     slug: "pupuseria-edificio-j",
     nombre: "Pupusería Edificio J",
     nombreProvisional: true,
-    ubicacion: "Costado derecho del edificio J, junto al puesto de pollo",
+    ubicacion: "Chilamate · costado del edificio J, junto al pollo",
     correo: "pupusas@uamv.edu.ni",
     personalCocina: 1,
     anchoFranjaMin: 15,
