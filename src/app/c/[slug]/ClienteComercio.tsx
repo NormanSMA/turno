@@ -947,6 +947,17 @@ export function ClienteComercio({
                     cantidad={carrito[p.id] ?? 0}
                     onCambiar={cambiar}
                     prioridad={i < 3}
+                    /* Agotado y cerrado se distinguen: uno es del producto y
+                       vuelve cuando repongan, el otro es del local y vuelve
+                       cuando abra. Para quien mira son dos esperas distintas. */
+                    bloqueado={cerrado || !p.disponible}
+                    motivo={
+                      !p.disponible
+                        ? "Agotado"
+                        : pausado
+                          ? "Pedidos pausados"
+                          : "Comercio cerrado"
+                    }
                   />
                 ))}
               </ul>
@@ -1272,11 +1283,17 @@ function TarjetaProducto({
   cantidad,
   onCambiar,
   prioridad,
+  bloqueado,
+  motivo,
 }: {
   producto: ProductoUI;
   cantidad: number;
   onCambiar: (id: string, delta: number) => void;
   prioridad: boolean;
+  /** El comercio no admite pedidos ahora, o el producto está agotado. */
+  bloqueado: boolean;
+  /** Qué decirle a quien intente sumar igual. */
+  motivo: string;
 }) {
   const elegido = cantidad > 0;
   const foto = useRef<HTMLDivElement>(null);
@@ -1343,32 +1360,50 @@ function TarjetaProducto({
         <p className="hora mt-1 text-sm">{cordobas(producto.precio)}</p>
 
         <div className="mt-auto flex items-center justify-end gap-1 pt-3">
-          {elegido && (
+          {/*
+            * Con el comercio cerrado el "+" se apaga, no solo falla después.
+            *
+            * Antes se podía sumar al carrito de un local cerrado: el botón
+            * respondía, el número subía, y el rechazo llegaba recién al
+            * confirmar. Es la misma promesa rota que las bebidas en Explorar —
+            * ofrecer algo y negarlo un paso más tarde—, y acá cuesta más caro
+            * porque para entonces la persona ya armó el pedido entero.
+            *
+            * Se apaga y se dice por qué. Un control apagado sin motivo se lee
+            * como que la aplicación se rompió.
+            */}
+          {bloqueado ? (
+            <span className="text-caption font-medium text-texto-2">{motivo}</span>
+          ) : (
             <>
+              {elegido && (
+                <>
+                  <button
+                    type="button"
+                    aria-label={`Quitar un ${producto.nombre}`}
+                    onClick={() => onCambiar(producto.id, -1)}
+                    className="toque h-9 w-9 rounded-full border border-borde text-lg leading-none"
+                  >
+                    −
+                  </button>
+                  <span
+                    className="hora w-6 text-center text-sm font-semibold"
+                    aria-live="polite"
+                  >
+                    {cantidad}
+                  </span>
+                </>
+              )}
               <button
                 type="button"
-                aria-label={`Quitar un ${producto.nombre}`}
-                onClick={() => onCambiar(producto.id, -1)}
-                className="toque h-9 w-9 rounded-full border border-borde text-lg leading-none"
+                aria-label={`Agregar un ${producto.nombre}`}
+                onClick={agregar}
+                className="toque h-9 w-9 rounded-full bg-marca-fondo text-lg leading-none text-white"
               >
-                −
+                +
               </button>
-              <span
-                className="hora w-6 text-center text-sm font-semibold"
-                aria-live="polite"
-              >
-                {cantidad}
-              </span>
             </>
           )}
-          <button
-            type="button"
-            aria-label={`Agregar un ${producto.nombre}`}
-            onClick={agregar}
-            className="toque h-9 w-9 rounded-full bg-marca-fondo text-lg leading-none text-white"
-          >
-            +
-          </button>
         </div>
       </div>
     </li>
