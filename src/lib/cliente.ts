@@ -176,3 +176,44 @@ export function cordobas(monto: string | number): string {
     maximumFractionDigits: 2,
   });
 }
+
+/**
+ * El día de una fecha, en la zona del campus.
+ *
+ * Devuelve `AAAA-MM-DD` para comparar, no para mostrar. Existe porque
+ * `toDateString()` resuelve el día en la zona del NAVEGADOR, mientras que
+ * `horaCorta` fuerza la de Managua: con las dos mezcladas, la interfaz puede
+ * decidir que dos franjas son de días distintos usando un reloj y pintar sus
+ * horas con otro. Cerca de medianoche eso cambia lo que se ve.
+ */
+export function diaEnCampus(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA", {
+    timeZone: "America/Managua",
+  });
+}
+
+/**
+ * Cómo se nombra un día frente a hoy: "Hoy", "Mañana", o el día con su fecha.
+ *
+ * Un estudiante no piensa en "05-SEPT", piensa en "mañana". La fecha completa
+ * solo aparece cuando ya no hay una palabra para el día, que es a partir de
+ * pasado mañana.
+ */
+export function nombreDelDia(iso: string): string {
+  const dia = diaEnCampus(iso);
+  const hoy = diaEnCampus(new Date().toISOString());
+  if (dia === hoy) return "Hoy";
+
+  // Comparar por fecha de calendario y no sumando 24 h: un cambio de horario
+  // haría que "mañana" cayera a 23 o 25 horas y la cuenta fallara ese día.
+  const manana = new Date();
+  manana.setDate(manana.getDate() + 1);
+  if (dia === diaEnCampus(manana.toISOString())) return "Mañana";
+
+  return new Date(iso).toLocaleDateString("es-NI", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "America/Managua",
+  });
+}

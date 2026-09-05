@@ -738,9 +738,16 @@ export function ClienteComercio({
             </span>
           </div>
 
-          <h1 className="titulo text-4xl sm:text-5xl">
-            ¿Qué vas a retirar hoy?
-          </h1>
+          {/* Sin "hoy".
+              Decía "¿Qué vas a retirar hoy?" y no siempre es hoy: a las ocho de
+              la noche el local sigue marcado ABIERTO pero sus horas ya son de
+              mañana, así que el título afirmaba un día que el selector de abajo
+              desmentía. No se puede arreglar mirando `cerrado`, que es el
+              estado que declaró el comercio y no si quedan huecos; el día real
+              solo se sabe con las franjas, que se piden después. La pregunta
+              sin día no miente nunca, y el día va donde se decide: en la
+              regla. */}
+          <h1 className="titulo text-4xl sm:text-5xl">¿Qué vas a retirar?</h1>
 
           {/* §41: se le devolvió el carrito. Decirlo importa — un carrito que
               aparece poblado sin explicación se lee como un error de la

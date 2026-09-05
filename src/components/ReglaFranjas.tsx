@@ -16,17 +16,28 @@
  * diferencia medida se pueda atribuir a la sugerencia y no al diseño.
  */
 
-import { fechaCorta, horaCorta, type OpcionFranjaUI } from "@/lib/cliente";
+import {
+  diaEnCampus,
+  fechaCorta,
+  horaCorta,
+  nombreDelDia,
+  type OpcionFranjaUI,
+} from "@/lib/cliente";
 import { minutosHasta, useAhora } from "@/lib/reloj";
 import { Icono } from "@/components/iconos";
 import { admite, margenDe, TEXTO_MARGEN } from "@/core/cabe";
 
-function dia(iso: string): string {
-  return new Date(iso).toDateString();
-}
+/*
+ * El día se resuelve en la zona del campus.
+ *
+ * Antes era `toDateString()`, que usa la del navegador, mientras que
+ * `horaCorta` fuerza Managua: dos relojes distintos decidiendo, uno qué día es
+ * y otro qué hora mostrar. Cerca de medianoche discrepan.
+ */
+const dia = diaEnCampus;
 
 function esHoy(iso: string): boolean {
-  return dia(iso) === new Date().toDateString();
+  return dia(iso) === dia(new Date().toISOString());
 }
 
 export type FranjaVisible = OpcionFranjaUI;
@@ -60,8 +71,38 @@ export function ReglaFranjas({
     );
   }
 
+  /*
+   * A qué día pertenecen estas horas, dicho FUERA de la regla.
+   *
+   * La fecha se marcaba dentro, y solo en la primera columna. Pero la regla se
+   * desplaza: en cuanto alguien la corre, la única columna que llevaba el día
+   * sale de la vista y quedan cinco horas sueltas — "11:50", "12:00"— que el
+   * estudiante lee como de hoy. A las ocho de la noche, viendo horas de la
+   * mañana sin día, lo que parece es que el sistema está roto.
+   *
+   * Acá va el día del primer hueco disponible, siempre visible. La marca de
+   * cambio de día se queda dentro para cuando la lista cruza la medianoche,
+   * que es lo que sí necesita señalarse en su sitio exacto.
+   */
+  const primera = opciones[0];
+  const rotuloDia = primera && !esHoy(primera.inicio) ? nombreDelDia(primera.inicio) : null;
+  const cruzaDias =
+    primera && opciones.some((o) => dia(o.inicio) !== dia(primera.inicio));
+
   return (
     <div>
+      {rotuloDia && (
+        <p className="mb-2 flex items-center gap-1.5 text-chico font-semibold">
+          <Icono nombre="reloj" size={14} />
+          {cruzaDias ? `Desde ${rotuloDia.toLowerCase()}` : rotuloDia}
+          {/* Por qué no hay horas antes: hoy ya cerró, o lo que queda no da
+              tiempo de preparar. Sin esta línea, el salto al día siguiente
+              parece un fallo en vez de una consecuencia. */}
+          <span className="font-normal text-texto-2">
+            · hoy ya no hay horas disponibles
+          </span>
+        </p>
+      )}
       <div className="regla" role="radiogroup" aria-label="Hora de retiro">
         {opciones.map((o, i) => {
           // La fecha se muestra solo cuando CAMBIA el día, como en un horario:
@@ -113,10 +154,15 @@ export function ReglaFranjas({
                 <span className="etiqueta block">
                   {/* El día solo se muestra cuando NO es hoy: en el caso normal
                       sería ruido, y en el caso de mañana es imprescindible. */}
-                  {sugerida
-                    ? "• mejor hora"
-                    : abreDia
-                      ? fechaCorta(o.inicio)
+                  {/* La fecha y la sugerencia compartían este hueco, y la
+                      sugerencia ganaba: en condición B, la "mejor hora" del día
+                      siguiente no decía que era del día siguiente. Ahora el
+                      cambio de día manda, porque equivocarse de día es peor que
+                      no ver una recomendación. */}
+                  {abreDia
+                    ? fechaCorta(o.inicio)
+                    : sugerida
+                      ? "• mejor hora"
                       : cabe
                         ? ""
                         : "llena"}
