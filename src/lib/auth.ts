@@ -327,11 +327,27 @@ export async function accederConCredenciales(
   password: string,
   userAgent?: string | null,
 ): Promise<
-  | { ok: true; token: string; expiraEn: Date; rol: RolUsuario; debeCambiarPassword: boolean }
+  | {
+      ok: true;
+      token: string;
+      expiraEn: Date;
+      rol: RolUsuario;
+      /** Slug del comercio que opera. `null` para el administrador. */
+      comercioSlug: string | null;
+      debeCambiarPassword: boolean;
+    }
   | { ok: false; motivo: MotivoAccesoFallido }
 > {
   const correo = normalizarCorreo(correoBruto);
-  const usuario = await prisma.usuario.findUnique({ where: { correo } });
+  /*
+   * Se trae el comercio junto al usuario, no en una consulta aparte: quien
+   * acaba de entrar necesita saber a qué cocina va, y pedirlo después es un
+   * viaje más en el momento en que la persona está esperando.
+   */
+  const usuario = await prisma.usuario.findUnique({
+    where: { correo },
+    include: { comercio: { select: { slug: true } } },
+  });
 
   // Hash señuelo: se verifica siempre, exista o no la cuenta, para que el
   // tiempo de respuesta no revele qué correos están registrados.
@@ -366,6 +382,7 @@ export async function accederConCredenciales(
     token: tokenSesion,
     expiraEn,
     rol: usuario.rol,
+    comercioSlug: usuario.comercio?.slug ?? null,
     debeCambiarPassword: usuario.debeCambiarPassword,
   };
 }

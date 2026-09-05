@@ -14,10 +14,12 @@ import { olvidarSesion } from "@/lib/sesion-cliente";
 import { CampoPassword } from "@/components/CampoPassword";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { esRutaSegura } from "@/core/rutas";
+import { destinoTrasEntrar, esRutaSegura } from "@/core/rutas";
 import { api, ErrorApi } from "@/lib/cliente";
 
 interface Respuesta {
+  /** Comercio que opera esta cuenta; `null` para el administrador. */
+  comercioSlug: string | null;
   autenticado: boolean;
   rol: "COMERCIO" | "ADMIN";
   debeCambiarPassword: boolean;
@@ -44,11 +46,27 @@ function Acceso() {
         body: JSON.stringify({ correo, password }),
       });
 
-      // El destino depende del rol: al operador le sirve la cocina, al
-      // administrador el panel. Mandar a los dos al mismo lado obligaría a uno
-      // de los dos a navegar de más en cada acceso.
-      const destino =
-        volver ?? (r.rol === "ADMIN" ? "/panel" : "/cocina/cafeteria-central");
+      /*
+       * El destino lo decide `destinoTrasEntrar`, no esta pantalla.
+       *
+       * Acá había un slug escrito a mano — la cocina de un comercio concreto —
+       * como destino de CUALQUIER operador. Funcionó mientras ese comercio
+       * existía y era el único; con diez locales, el de Subway entraba y
+       * aterrizaba en la cocina de otro, y cuando ese comercio dejó de existir,
+       * en un error.
+       *
+       * Un identificador de un dato concreto incrustado en el código no falla
+       * al escribirlo: falla el día que ese dato cambia, y para entonces nadie
+       * recuerda que estaba ahí.
+       *
+       * La regla vive en `core/rutas` porque es una decisión con pruebas —a
+       * qué comercio puede entrar quién— y no un detalle de esta pantalla.
+       */
+      const destino = destinoTrasEntrar({
+        volver,
+        rol: r.rol,
+        comercioSlug: r.comercioSlug,
+      });
 
       /*
        * Recarga completa, no `router.replace`.

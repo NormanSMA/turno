@@ -49,6 +49,8 @@ export async function POST(req: Request) {
     return ok({
       autenticado: true,
       rol: r.rol,
+      // Sin esto, el cliente no puede saber a qué cocina mandar a quien entra.
+      comercioSlug: r.comercioSlug,
       debeCambiarPassword: r.debeCambiarPassword,
     });
   } catch (e) {

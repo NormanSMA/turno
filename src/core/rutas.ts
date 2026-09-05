@@ -61,3 +61,47 @@ export function rutaSegura(
 ): string {
   return esRutaSegura(destino) ? destino! : porDefecto;
 }
+
+/**
+ * A dónde mandar a alguien que acaba de entrar.
+ *
+ * `volver` es el destino que se pidió antes de identificarse, y respetarlo es
+ * lo correcto casi siempre: quien iba a una pantalla concreta vuelve a ella en
+ * vez de aterrizar en el inicio.
+ *
+ * Con una excepción: **un operador entra a su comercio y a ninguno otro**. Si
+ * el `volver` apunta a la cocina o al panel de otro local, se descarta. Pasaba
+ * de verdad y sin mala intención: el navegador guarda la dirección de acceso
+ * con su `?volver=`, y bastaba haber abierto una vez la cocina de otro comercio
+ * —o una que ya no existe— para que cada acceso posterior aterrizara ahí, en un
+ * tablero ajeno o en un error.
+ *
+ * No sustituye a la autorización del servidor, que ya devuelve 403 sobre los
+ * datos de otro comercio. Esto evita el viaje: llevar a alguien a una pantalla
+ * que le va a decir que no es suya es una forma cara de decir "no".
+ *
+ * El administrador no tiene comercio propio y sí necesita entrar a cualquiera,
+ * así que para él el `volver` se respeta tal cual.
+ */
+export function destinoTrasEntrar(args: {
+  volver: string | null;
+  rol: string;
+  /** Comercio que opera la cuenta. `null` para el administrador. */
+  comercioSlug: string | null;
+}): string {
+  const { volver, rol, comercioSlug } = args;
+  const propio = comercioSlug ? `/cocina/${comercioSlug}` : "/";
+  const porDefecto = rol === "ADMIN" ? "/panel" : propio;
+
+  if (!esRutaSegura(volver)) return porDefecto;
+
+  if (rol === "COMERCIO" && comercioSlug) {
+    // `/cocina/<slug>` y `/comercio/<slug>` son las dos rutas que pertenecen a
+    // un comercio concreto. El resto —el perfil, los avisos— es de la persona y
+    // no hace falta filtrarlo.
+    const m = volver!.match(/^\/(?:cocina|comercio)\/([^/?#]+)/);
+    if (m && m[1] !== comercioSlug) return propio;
+  }
+
+  return volver!;
+}
