@@ -28,7 +28,12 @@ import { api } from "@/lib/cliente";
 
 interface Sesion {
   autenticado: boolean;
-  usuario?: { correo: string; rol: string; comercioId: string | null };
+  usuario?: {
+    correo: string;
+    rol: string;
+    comercioId: string | null;
+    comercioSlug?: string | null;
+  };
 }
 
 interface Destino {
@@ -123,6 +128,15 @@ function Punto({ n, etiqueta }: { n: number; etiqueta: string }) {
   );
 }
 
+/**
+ * `comercioSlug` sigue aceptándose por prop, pero manda el de la sesión.
+ *
+ * La prop venía de lo que cada pantalla tuviera a mano, y en `/explorar` era
+ * `comercios[0]?.slug`: el primero de la lista. Un operador de Subway veía el
+ * enlace "Cocina" apuntando a otro local, entraba, y se encontraba un tablero
+ * que no era el suyo. Quién opera qué lo sabe el servidor, así que se pregunta
+ * ahí; la prop queda como valor inicial mientras la sesión llega.
+ */
 export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
   const ruta = usePathname();
   const [sesion, setSesion] = useState<Sesion | null>(null);
@@ -134,6 +148,7 @@ export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
   }, [ruta]);
 
   const rol = sesion?.usuario?.rol;
+  const miComercio = sesion?.usuario?.comercioSlug ?? comercioSlug;
   const dentro = sesion?.autenticado === true;
   const sinLeer = useSinLeer(dentro);
   const enCurso = useEnCurso(dentro);
@@ -196,12 +211,12 @@ export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
   // separación de funciones entre quien produce el dato y quien lo mide.
   if (rol === "COMERCIO") {
     destinos.push({
-      href: comercioSlug ? `/cocina/${comercioSlug}` : "/cocina",
+      href: miComercio ? `/cocina/${miComercio}` : "/cocina",
       texto: "Cocina",
       icono: "fuego",
     });
     destinos.push({
-      href: comercioSlug ? `/comercio/${comercioSlug}` : "/cocina",
+      href: miComercio ? `/comercio/${miComercio}` : "/cocina",
       texto: "Comercio",
       icono: "ajustes",
     });

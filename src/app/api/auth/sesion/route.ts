@@ -18,6 +18,8 @@ export async function GET() {
         nombre: s.nombre,
         rol: s.rol,
         comercioId: s.comercioId,
+        // El slug es lo que permite construir /cocina/... y /comercio/...
+        comercioSlug: s.comercioSlug,
         // La condición experimental se expone para que la UI aplique la
         // variante A o B; el servidor es quien la decidió y la persiste.
         condicion: s.condicionExperimental,

@@ -73,7 +73,16 @@ export async function sesionActual(): Promise<SesionActiva | null> {
 
   const sesion = await prisma.sesion.findUnique({
     where: { tokenHash: hashToken(token) },
-    include: { usuario: true },
+    /*
+     * Se trae también el slug del comercio, no solo su id.
+     *
+     * El id no sirve para construir una dirección, así que cada pantalla que
+     * necesitaba enlazar a "mi cocina" lo resolvía por su cuenta — y una lo
+     * hacía tomando el PRIMER comercio de la lista, que para un operador de
+     * Subway apuntaba a otro local. Con el slug en la sesión hay una sola
+     * respuesta a "cuál es mi comercio", y es la del servidor.
+     */
+    include: { usuario: { include: { comercio: { select: { slug: true } } } } },
   });
   if (!evaluarSesion(sesion).valido || !sesion) return null;
 
@@ -84,6 +93,7 @@ export async function sesionActual(): Promise<SesionActiva | null> {
     nombre: sesion.usuario.nombre,
     rol: sesion.usuario.rol,
     comercioId: sesion.usuario.comercioId,
+    comercioSlug: sesion.usuario.comercio?.slug ?? null,
     condicionExperimental: sesion.usuario.condicionExperimental,
   };
 }

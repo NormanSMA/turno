@@ -16,6 +16,13 @@ export interface SesionActiva {
   nombre: string | null;
   rol: RolUsuario;
   comercioId: string | null;
+  /**
+   * Slug del comercio que opera esta cuenta.
+   *
+   * Va junto al id porque el id no sirve para construir una dirección, y sin
+   * esto cada pantalla resolvía "cuál es mi comercio" por su cuenta.
+   */
+  comercioSlug: string | null;
   condicionExperimental: "A" | "B";
 }
 

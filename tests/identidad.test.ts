@@ -139,6 +139,7 @@ describe("autorización de lectura de pedido (IDOR)", () => {
     nombre: null,
     rol: "ESTUDIANTE",
     comercioId: null,
+        comercioSlug: null,
     condicionExperimental: "A",
   };
   const operador: SesionActiva = { ...estudiante, usuarioId: "u9", rol: "COMERCIO", comercioId: "c1" };
@@ -178,6 +179,7 @@ describe("separación de funciones: quién OPERA la cocina", () => {
     nombre: null,
     rol: "ESTUDIANTE",
     comercioId: null,
+        comercioSlug: null,
     condicionExperimental: "A",
   };
   const operador: SesionActiva = { ...estudiante, usuarioId: "u9", rol: "COMERCIO", comercioId: "c1" };

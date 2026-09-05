@@ -159,9 +159,36 @@ export default function Pagina({
           );
           return;
         }
-        // Un fallo de red NO borra la pantalla: el operador sigue viendo la
-        // última cola conocida, con aviso de que está desactualizada.
+        /*
+         * Un comercio que no existe no es un problema de red.
+         *
+         * Caía en el mismo saco que la desconexión, así que la pantalla decía
+         * "sin conexión · mostrando la última cola conocida" sobre un tablero
+         * vacío: el operador se queda esperando a que vuelva la señal por algo
+         * que no va a arreglarse solo. Pasa al abrir un enlace guardado de un
+         * comercio que se renombró o se dio de baja.
+         */
+        if (e instanceof ErrorApi && e.status === 404) {
+          setError(
+            `No existe ningún comercio con la dirección "${slug}". ` +
+              "Revisá el enlace: puede que lo hayan renombrado.",
+          );
+          return;
+        }
+
+        /*
+         * Solo se declara desconexión cuando el servidor NO respondió.
+         *
+         * Si contestó con un error, hay conexión: decir lo contrario manda al
+         * operador a revisar el wifi por un fallo que está del otro lado. Con
+         * respuesta de error se conserva igual la última cola —el tablero no
+         * puede quedarse en blanco en medio del servicio— pero el aviso dice
+         * que no se pudo actualizar, que es lo que de verdad pasó.
+         */
         setDesconectado(true);
+        if (e instanceof ErrorApi) {
+          setError("No se pudo actualizar la cola. Reintentando…");
+        }
       });
   }, [slug, router]);
 

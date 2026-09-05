@@ -33,6 +33,8 @@ export interface Sesion {
     nombre: string | null;
     rol: string;
     comercioId: string | null;
+    /** Slug del comercio que opera esta cuenta. `null` para estudiantes. */
+    comercioSlug?: string | null;
     condicion?: string;
   };
 }
