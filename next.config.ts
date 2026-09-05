@@ -47,10 +47,19 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
-            // El piloto no usa cámara, micrófono ni ubicación. Declararlo cierra
-            // la puerta antes de que a alguien se le ocurra abrirla.
+            /*
+             * La cámara se abre para el propio origen: la cocina lee con ella
+             * el QR de retiro (`EscanerRetiro`). Estaba en `camera=()` con el
+             * comentario "el piloto no usa cámara", y esa cabecera gana sobre
+             * el permiso que dé la persona: el navegador ni siquiera pregunta,
+             * devuelve `NotAllowedError`, y el mostrador vería "cámara
+             * bloqueada" después de haberla permitido.
+             *
+             * `self` y no `*`: solo esta aplicación, nunca un tercero incrustado.
+             * Micrófono, ubicación y pagos siguen cerrados porque nada los usa.
+             */
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=()",
+            value: "camera=(self), microphone=(), geolocation=(), payment=()",
           },
           {
             // Dos años y subdominios: exigido para HTTPS estricto de verdad.
