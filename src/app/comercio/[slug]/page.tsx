@@ -90,7 +90,6 @@ interface Estado {
 const PESTANAS = [
   ["catalogo", "Catálogo"],
   ["franjas", "Horas"],
-  ["informe", "Informe"],
   ["ajustes", "Ajustes"],
   ["cuenta", "Cuenta"],
 ] as const;
@@ -115,7 +114,11 @@ export default function Pagina({
    * perdió.
    */
   const busqueda = useSearchParams();
-  const pedida = busqueda.get("ver");
+  /* `informe` era una pestaña propia y ahora vive dentro de `cuenta`. Se
+     traduce en vez de ignorarse: un marcador viejo tiene que seguir abriendo
+     donde está el informe, no el catálogo. */
+  const cruda = busqueda.get("ver");
+  const pedida = cruda === "informe" ? "cuenta" : cruda;
   const [pestana, setPestana] = useState<Pestana>(
     PESTANAS.some(([id]) => id === pedida) ? (pedida as Pestana) : "catalogo",
   );
@@ -197,9 +200,7 @@ export default function Pagina({
           <Ajustes estado={estado} slug={slug} onCambio={cargar} />
         )}
 
-        {pestana === "informe" && <Informe slug={slug} />}
-
-        {pestana === "cuenta" && <Cuenta />}
+        {pestana === "cuenta" && <Cuenta slug={slug} />}
       </div>
     </main>
   );
@@ -340,7 +341,7 @@ function Catalogo({
  * actividad —pedidos, favoritos— siguen donde estaban, porque pertenecen a
  * quien pide, no a quien despacha.
  */
-function Cuenta() {
+function Cuenta({ slug }: { slug: string }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [saliendo, setSaliendo] = useState(false);
 
@@ -351,7 +352,13 @@ function Cuenta() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="space-y-8">
+      {/* El informe primero: es a lo que se entra. Los datos de la cuenta se
+          tocan una vez cada mucho, así que van debajo y no le quitan el sitio
+          a lo que se consulta a diario. */}
+      <Informe slug={slug} />
+
+      <div className="mx-auto max-w-lg space-y-4">
       <section className="tarjeta p-4">
         <p className="etiqueta">Sesión</p>
         <p className="mt-1 break-all font-semibold">
@@ -383,6 +390,7 @@ function Cuenta() {
         <Icono nombre="salir" size={18} />
         {saliendo ? "Cerrando sesión…" : "Cerrar sesión"}
       </button>
+      </div>
     </div>
   );
 }
