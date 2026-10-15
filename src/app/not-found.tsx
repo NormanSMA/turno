@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Animacion } from "@/components/Animacion";
 import { MarcaTurno } from "@/components/marca";
 
 /**
@@ -13,6 +14,9 @@ export default function NoEncontrada() {
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-10 text-center">
       <div className="mx-auto mb-5">
         <MarcaTurno size={48} />
+      </div>
+      <div className="mx-auto mb-2">
+        <Animacion nombre="vacio" />
       </div>
       <p className="etiqueta">No encontramos esa página</p>
       <h1 className="titulo mt-2 text-4xl">Acá no hay nada</h1>

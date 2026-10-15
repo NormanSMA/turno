@@ -1,3 +1,5 @@
+import { MovimientoProveedor } from "@/components/MovimientoProveedor";
+import { Toaster } from "@/components/ui/sonner";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -73,7 +75,8 @@ export default function RootLayout({
           Saltar al contenido
         </a>
         <Arranque />
-        {children}
+        <MovimientoProveedor>{children}</MovimientoProveedor>
+        <Toaster />
       </body>
     </html>
   );

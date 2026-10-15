@@ -3,3 +3,5 @@ allowBuilds:
   esbuild: true
   prisma: true
   unrs-resolver: true
+patchedDependencies:
+  sonner: patches/sonner.patch

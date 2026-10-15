@@ -115,3 +115,10 @@ Dependencias: T1 y T2 primero. T3 en paralelo con T2. T5, T7, T8 y T10 después 
 - **T10. Diferir recharts y TanStack Table.** `/`, `/explorar`, `/c/[slug]` y `/pedido/[id]` no cargan esos chunks.
 
 **Cierre de la fase 2:** CLS 0, P95 de 110 ms o menos, `pnpm test`, typecheck, lint, build y E2E en verde.
+
+## 10. Resultado de la fase 2 (2026-10-15)
+- **Lottie:** se usa `lottie-web/build/player/lottie_light` directo, con un envoltorio propio (`src/components/Animacion.tsx`). `lottie-react` no ofrece build light. El bundle light no contiene `eval` ni `new Function`.
+- **Sonner:** inyecta un `<style>` sin nonce al cargarse, y `style-src-elem 'self'` lo bloquea. Se parchea con `pnpm patch` (`patches/sonner.patch`) para anular `__insertCSS`, y los estilos se importan desde `sonner/dist/styles.css`. Al actualizar Sonner, reaplicar el parche y correr `e2e/csp.spec.ts`.
+- **Prueba de CSP:** `e2e/csp.spec.ts` cubre 8 rutas por 2 modos de movimiento y un control negativo. El control usa `connect-src` y `style-src-elem`, no un script externo: con `strict-dynamic` el navegador no bloquea un script inyectado desde la consola.
+- **shadcn:** estilo `radix-vega` (el estilo `new-york` ya no existe). Las variables de shadcn apuntan a los tokens de TURNO en `globals.css`; no tienen valores propios.
+- **Pendiente de la sección 4:** línea base de KB por ruta (T1).

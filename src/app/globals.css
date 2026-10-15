@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Los tokens ya cambian solos con el tema; `dark:` solo cubre el tema forzado. */
+@custom-variant dark (&:is([data-tema="oscuro"] *));
 
 /*
  * TURNO — Design System v1.0
@@ -807,4 +812,77 @@ select:-webkit-autofill {
   box-shadow: 0 0 0 1000px var(--color-papel-alto) inset;
   caret-color: var(--color-texto);
   transition: background-color 100000s ease-in-out 0s;
+}
+
+/* ====================================================================
+   shadcn/ui (ADR-23)
+   Las variables de shadcn apuntan a los tokens de TURNO. No tienen valores
+   propios: si cambia la paleta (ADR-22), shadcn la sigue sin tocar este bloque.
+   ==================================================================== */
+:root {
+  --background: var(--color-fondo);
+  --foreground: var(--color-texto);
+  --card: var(--color-superficie);
+  --card-foreground: var(--color-texto);
+  --popover: var(--color-superficie);
+  --popover-foreground: var(--color-texto);
+  --primary: var(--color-marca-fondo);
+  --primary-foreground: var(--color-superficie);
+  --secondary: var(--color-superficie-2);
+  --secondary-foreground: var(--color-texto);
+  --muted: var(--color-superficie-2);
+  --muted-foreground: var(--color-texto-2);
+  --accent: var(--color-superficie-3);
+  --accent-foreground: var(--color-texto);
+  --destructive: var(--color-error);
+  --border: var(--color-borde);
+  --input: var(--color-borde);
+  --ring: var(--color-marca-fondo);
+  --chart-1: var(--color-marca-fondo);
+  --chart-2: var(--color-exito);
+  --chart-3: var(--color-atencion);
+  --chart-4: var(--color-texto-2);
+  --chart-5: var(--color-aviso);
+  --sidebar: var(--color-superficie);
+  --sidebar-foreground: var(--color-texto);
+  --sidebar-primary: var(--color-marca-fondo);
+  --sidebar-primary-foreground: var(--color-superficie);
+  --sidebar-accent: var(--color-superficie-2);
+  --sidebar-accent-foreground: var(--color-texto);
+  --sidebar-border: var(--color-borde);
+  --sidebar-ring: var(--color-marca-fondo);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }

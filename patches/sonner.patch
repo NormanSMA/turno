@@ -1,0 +1,26 @@
+diff --git a/dist/index.js b/dist/index.js
+index 394dbc2272f43b84642b0f9d5cc7eb1eacb0ffb3..b0ddeea0b5af29e817f2122b921b08abfb12b5a0 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1,6 +1,7 @@
+ 'use client';
+ function __insertCSS(code) {
+-  if (!code || typeof document == 'undefined') return
++  // TURNO (ADR-23): sin <style> inyectado, el CSP lo bloquea. Los estilos van por dist/styles.css.
++  return
+   let head = document.head || document.getElementsByTagName('head')[0]
+   let style = document.createElement('style')
+   style.type = 'text/css'
+diff --git a/dist/index.mjs b/dist/index.mjs
+index c124f821a68f7070647a5a04441d0caa53689662..0a9e2f58f004fc7e3ad420f105e270a2a97cb6aa 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1,6 +1,7 @@
+ 'use client';
+ function __insertCSS(code) {
+-  if (!code || typeof document == 'undefined') return
++  // TURNO (ADR-23): sin <style> inyectado, el CSP lo bloquea. Los estilos van por dist/styles.css.
++  return
+   let head = document.head || document.getElementsByTagName('head')[0]
+   let style = document.createElement('style')
+   style.type = 'text/css'
