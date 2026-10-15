@@ -43,13 +43,13 @@ const FORMA: Record<
     titulo: "Ya no se puede reservar",
     detalle: "Sigue habiendo, pero ahora solo se pide en el mostrador.",
     icono: "reloj",
-    color: "text-aviso",
+    color: "text-aviso-texto",
   },
   PRECIO: {
     titulo: "Cambió de precio",
     detalle: "",
     icono: "repetir",
-    color: "text-aviso",
+    color: "text-aviso-texto",
   },
 };
 

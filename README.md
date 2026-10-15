@@ -39,6 +39,7 @@ Por eso puede prometerte una hora de retiro y cumplirla.
 - [El problema](#el-problema)
 - [Qué hace TURNO](#qué-hace-turno)
 - [Cómo decide la cocina](#cómo-decide-la-cocina)
+- [Identidad](#identidad)
 - [Para quién](#para-quién)
 - [Tres pantallas, tres oficios](#tres-pantallas-tres-oficios)
 - [Lo que TURNO no hace](#lo-que-turno-no-hace)
@@ -95,6 +96,18 @@ paga en el mostrador y se va. Sin fila.
 | 4. Se prepara | La cocina ve el pedido ordenado por urgencia real. |
 | 5. Se retira | El estudiante muestra un código y paga en el mostrador. |
 
+## Identidad
+
+Paleta Gourmet Minimal: crema, arena, oliva, carbón y dorado. El rojo y el ámbar
+quedan reservados para la urgencia. Logo de reloj con una franja marcada,
+mascota "turno" y personajes de [Open Peeps](https://www.openpeeps.com) (CC0).
+Decisiones en [ADR-22](./docs/adr/adr-22-identidad.md) y licencias en
+[`docs/licencias-assets.md`](./docs/licencias-assets.md).
+
+<div align="center">
+<img src="docs/assets/identidad-light.png" alt="Paleta, logo, mascota y personajes de TURNO" width="720">
+</div>
+
 ## Para quién
 
 | | |
@@ -150,6 +163,7 @@ sorpresa cuesta caro.
 | [`docs/adr/`](./docs/adr) | Decisiones de arquitectura y sus alternativas |
 | [`docs/requisitos.md`](./docs/requisitos.md) | Requisitos del producto |
 | [`docs/design-system.md`](./docs/design-system.md) | Sistema de diseño |
+| [`docs/licencias-assets.md`](./docs/licencias-assets.md) | Origen y licencia de cada asset |
 | [`docs/mapa-pantallas.md`](./docs/mapa-pantallas.md) | Mapa de pantallas |
 | [`audit/REPORT.md`](./audit/REPORT.md) | Informe de la auditoría técnica |
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LogotipoTurno, MarcaTurno } from "@/components/marca";
+import { Personaje } from "@/components/mascota/Personaje";
 import { MascotaTurno } from "@/components/mascota/Turno";
 
 export const metadata: Metadata = {
@@ -78,6 +79,20 @@ export default function Identidad() {
               <p className="mt-2 text-chico font-medium">{e.texto}</p>
             </li>
           ))}
+        </ul>
+      </section>
+
+      <section className="mt-12" aria-labelledby="personajes">
+        <h2 id="personajes" className="text-h2 font-bold">Personajes</h2>
+        <ul className="mt-4 grid grid-cols-2 gap-3 sm:max-w-md">
+          <li className="flex flex-col items-center rounded-lg border border-borde p-4">
+            <Personaje quien="estudiante" size={200} titulo="Estudiante" />
+            <p className="mt-2 text-chico font-medium">Estudiante</p>
+          </li>
+          <li className="flex flex-col items-center rounded-lg border border-borde p-4">
+            <Personaje quien="cocinero" size={200} titulo="Cocinero" />
+            <p className="mt-2 text-chico font-medium">Cocinero</p>
+          </li>
         </ul>
       </section>
 

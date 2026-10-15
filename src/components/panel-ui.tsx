@@ -20,7 +20,7 @@ const COLOR: Record<Tono, string> = {
 
 const TEXTO: Record<Tono, string> = {
   bueno: "text-exito",
-  aviso: "text-aviso",
+  aviso: "text-aviso-texto",
   malo: "text-error",
   neutro: "text-texto",
 };

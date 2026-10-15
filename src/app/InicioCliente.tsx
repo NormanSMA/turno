@@ -407,7 +407,7 @@ export function InicioCliente({
                           className={`shrink-0 rounded-full px-2.5 py-1 text-caption font-semibold ${
                             c.abierto
                               ? "bg-exito-suave text-exito"
-                              : "bg-atencion-suave text-aviso"
+                              : "bg-atencion-suave text-aviso-texto"
                           }`}
                         >
                           {c.abierto ? "Abierto" : "Pausado"}

@@ -50,7 +50,7 @@
  * La paleta.
  *
  * Del Design System vigente (`globals.css`), no de la lámina de marca: esa
- * propone `#E53935` y acá el rojo es `#C91525`. Se usa el de la aplicación
+ * propone otro rojo y acá la marca es oliva (`#34483C`, ADR-22). Se usa el de la aplicación
  * porque lo que se pidió es que el correo se vea parte del mismo producto, y
  * el producto es el que está desplegado.
  *
@@ -59,22 +59,22 @@
  * sistema aparece en el botón, lejos.
  */
 const C = {
-  marca: "#c91525",
+  marca: "#34483c",
   acento: "#e49b19",
-  tinta: "#171717",
-  fondo: "#f7f7f5",
-  superficie: "#ffffff",
-  superficie2: "#f1f2f0",
-  borde: "#e4e4e1",
-  texto: "#171717",
-  texto2: "#6b6b6b",
-  texto3: "#757575",
-  oscFondo: "#101010",
-  oscSuperficie: "#181818",
-  oscSuperficie2: "#222222",
-  oscBorde: "#303030",
-  oscTexto: "#ffffff",
-  oscTexto2: "#b7b7b7",
+  tinta: "#252521",
+  fondo: "#f7f4ee",
+  superficie: "#f7f4ee",
+  superficie2: "#e3d9c8",
+  borde: "#e3d9c8",
+  texto: "#252521",
+  texto2: "#34483c",
+  texto3: "#34483c",
+  oscFondo: "#252521",
+  oscSuperficie: "#34483c",
+  oscSuperficie2: "#2d3e34",
+  oscBorde: "#4b6154",
+  oscTexto: "#f7f4ee",
+  oscTexto2: "#e3d9c8",
 } as const;
 
 const FUENTE =

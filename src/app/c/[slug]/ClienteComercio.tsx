@@ -1169,7 +1169,7 @@ export function ClienteComercio({
                 {!franjaElegida ? (
                   "Elegí una hora arriba"
                 ) : veredicto?.tipo === "NO_CABE" ? (
-                  <span className="font-semibold text-aviso">
+                  <span className="font-semibold text-aviso-texto">
                     {veredicto.alternativa
                       ? `No llega — con lugar a las ${horaCorta(veredicto.alternativa.inicio)}`
                       : "No llega, y hoy no queda otra hora"}

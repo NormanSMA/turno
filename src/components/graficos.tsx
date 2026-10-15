@@ -14,10 +14,10 @@
  * pico y una tabla con los mismos números debajo.
  */
 
-const A = "#009ca6";
-const B = "#c26208";
-const REJILLA = "#dde9ea";
-const TINTA_TENUE = "#60636b";
+const A = "var(--color-marca-fondo)";
+const B = "var(--color-fidelidad)";
+const REJILLA = "var(--color-borde)";
+const TINTA_TENUE = "var(--color-texto-2)";
 
 export interface PuntoFranja {
   hora: string;
@@ -364,7 +364,7 @@ export function CumplimientoPorDia({ dias }: { dias: PuntoDia[] }) {
           y={y(META)}
           width={ancho}
           height={alto - y(META)}
-          fill="#ff5247"
+          fill="var(--color-error)"
           opacity="0.06"
         />
 
@@ -402,8 +402,8 @@ export function CumplimientoPorDia({ dias }: { dias: PuntoDia[] }) {
               cy={y(p.tasaCumplimiento!)}
               // El último va más grande: es el estado de hoy, no un día más.
               r={esUltimo ? 2.2 : falla ? 1.7 : 1.2}
-              fill={falla ? "#ff5247" : A}
-              stroke="#ffffff"
+              fill={falla ? "var(--color-error)" : A}
+              stroke="var(--color-fondo)"
               strokeWidth="0.6"
             >
               <title>{`${p.dia} · ${(p.tasaCumplimiento! * 100).toFixed(0)}% · ${p.pedidos} pedidos`}</title>

@@ -94,7 +94,7 @@ const FORMA: Record<
   EN_PREPARACION: {
     titulo: "Lo estamos preparando",
     icono: "fuego",
-    color: "text-aviso",
+    color: "text-aviso-texto",
     fondo: "bg-atencion-suave",
     ahora: "Esperá el aviso. Ya está en la cocina.",
     despues: "Después vas al mostrador y mostrás el código.",

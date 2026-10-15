@@ -179,7 +179,7 @@ export function ReglaFranjas({
                     {TEXTO_MARGEN[margenDe(o, cargaPedidoMin, ahora)]}
                   </span>
                   {porCerrar && (
-                    <span className="mt-0.5 flex items-center justify-center gap-0.5 text-[0.625rem] font-semibold text-aviso">
+                    <span className="mt-0.5 flex items-center justify-center gap-0.5 text-[0.625rem] font-semibold text-aviso-texto">
                       <Icono nombre="reloj" size={10} />
                       {cierraEnMin <= 0
                         ? "cierra ya"
@@ -212,7 +212,7 @@ export function ReglaFranjas({
           minutosHasta(o.cierraEn, ahora) <= 10 &&
           minutosHasta(o.cierraEn, ahora) >= 0,
       ) && (
-        <p className="mt-1 flex items-center gap-1.5 text-xs text-aviso">
+        <p className="mt-1 flex items-center gap-1.5 text-xs text-aviso-texto">
           <Icono nombre="reloj" size={13} />
           Las horas marcadas cierran pronto: después de esa hora ya no da el
           tiempo de cocina para tenerlo listo.

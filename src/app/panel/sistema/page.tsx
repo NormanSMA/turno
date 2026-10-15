@@ -442,7 +442,7 @@ function TablaDesvio({
                 <span className="text-chico font-semibold">{f.clave}</span>
                 <span
                   className={`hora text-chico font-bold tabular-nums ${
-                    alto ? "text-error" : bajo ? "text-aviso" : "text-exito"
+                    alto ? "text-error" : bajo ? "text-aviso-texto" : "text-exito"
                   }`}
                 >
                   x{f.factor.toFixed(2)}

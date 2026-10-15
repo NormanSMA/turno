@@ -52,13 +52,13 @@ interface Tramo {
  * en modo oscuro (punto 20 de la auditoria).
  *
  * Los tres valores estan elegidos contra el texto que llevan encima:
- *   #d92d20 con blanco -> 4.83:1
+ *   #c91525 con blanco -> 5.81:1 (urgencia)
  *   #e49b19 con tinta  -> 7.68:1
- *   #c91525 con blanco -> 5.81:1
+ *   #34483c con blanco -> 8.95:1 (oliva, la solución)
  */
-const ROJO_FILA = "#d92d20";
+const ROJO_FILA = "#c91525";
 const AMBAR_COCINA = "#e49b19";
-const ROJO_MARCA = "#c91525";
+const ROJO_MARCA = "#34483c";
 
 const SIN: Tramo[] = [
   {

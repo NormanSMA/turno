@@ -110,7 +110,7 @@ export function analizar(): Hallazgo[] {
 
       // 1 — color literal fuera de token
       if (!eximido(rel, "color-literal")) {
-        for (const m of codigo.matchAll(/#[0-9a-fA-F]{6}\b/g)) {
+        for (const m of codigo.matchAll(/#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g)) {
           const hex = m[0].toLowerCase();
           // Si el hex ES uno de los declarados en globals.css, sigue siendo un
           // literal: el problema no es el valor, es que no pasa por el token.
@@ -123,6 +123,37 @@ export function analizar(): Hallazgo[] {
               ? `es el valor de un token declarado: usar la variable, no el hex`
               : `color fuera del Design System`,
           });
+        }
+      }
+
+      /*
+       * 1b — colores que no son de texto (ADR-22)
+       *
+       * Dorado (fidelidad, atencion) y ambar (aviso) dan 2.76:1 y 2.13:1 sobre
+       * crema: sirven de relleno, borde e icono grande, nunca de letra. Para
+       * texto ambar existe `text-aviso-texto`. `text-brasa` es el alias del
+       * ambar brillante y solo vale en la cocina, que es oscura siempre.
+       */
+      if (!eximido(rel, "color-no-texto")) {
+        for (const m of codigo.matchAll(/\btext-(aviso|atencion|fidelidad|maiz)\b(?!-)/g)) {
+          hallazgos.push({
+            archivo: rel,
+            linea: n,
+            regla: "color-no-texto",
+            texto: m[0],
+            detalle: "dorado y ambar no pasan AA como texto: usar text-aviso-texto o un color de texto",
+          });
+        }
+        if (!rel.includes("/cocina/")) {
+          for (const m of codigo.matchAll(/\btext-brasa\b/g)) {
+            hallazgos.push({
+              archivo: rel,
+              linea: n,
+              regla: "color-no-texto",
+              texto: m[0],
+              detalle: "text-brasa solo en la cocina: fuera de ella usar text-aviso-texto",
+            });
+          }
         }
       }
 

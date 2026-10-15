@@ -123,7 +123,7 @@ export function HojaFranjaAgotada({
         />
 
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 shrink-0 text-aviso">
+          <span className="mt-0.5 shrink-0 text-aviso-texto">
             <Icono nombre="reloj" size={24} />
           </span>
           <div className="min-w-0">

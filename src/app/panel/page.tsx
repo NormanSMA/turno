@@ -473,7 +473,7 @@ function Tarjeta({
             ? "text-tinta-suave"
             : alcanzada
               ? "text-verde"
-              : "text-brasa"
+              : "text-aviso-texto"
         }`}
       >
         {/* La palabra solo se pone cuando hay juicio. Con `null` no es que

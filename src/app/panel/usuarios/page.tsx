@@ -143,7 +143,7 @@ export default function Pagina() {
               {u.passwordInicial && (
                 /* La contraseña inicial la conoce quien creó la cuenta, no solo
                    su dueño. Mientras no la cambie, es una puerta abierta. */
-                <p className="mt-2 flex items-center gap-1.5 text-caption font-semibold text-aviso">
+                <p className="mt-2 flex items-center gap-1.5 text-caption font-semibold text-aviso-texto">
                   <Icono nombre="reloj" size={13} />
                   Sigue con la contraseña inicial sin cambiar
                 </p>

@@ -61,6 +61,9 @@
   --color-error: #c91525;
   --color-error-suave: #f5e9e4;
   --color-aviso: #e49b19;
+  /* Ambar como TEXTO sobre superficies claras: #e49b19 da 2.13:1 sobre crema.
+     #7f5300 da 6.09:1 sobre crema y 5.35:1 sobre atencion-suave. */
+  --color-aviso-texto: #7f5300;
   /* Fidelidad (ADR-22): hábito, favoritos, código de retiro. Decorativo, nunca texto sobre crema. */
   --color-fidelidad: #b68d59;
 
@@ -213,6 +216,7 @@
        #ff6b5e da 5.51:1 sobre el fondo y 5.61:1 sobre su tinte. */
     --color-error: #ff6b5e;
     --color-error-suave: #3a1a17;
+    --color-aviso-texto: #f2b84b;
     --color-cocina: #252521;
     --color-cocina-alto: #34483c;
     --color-cocina-borde: #4b6154;
@@ -248,6 +252,7 @@
      #ff6b5e da 5.51:1 sobre el fondo y 5.61:1 sobre su tinte. */
   --color-error: #ff6b5e;
   --color-error-suave: #3a1a17;
+  --color-aviso-texto: #f2b84b;
   --color-cocina: #252521;
   --color-cocina-alto: #34483c;
   --color-cocina-borde: #4b6154;

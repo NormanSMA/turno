@@ -159,7 +159,7 @@ export default function Pagina() {
                       {/* La advertencia aparece solo cuando ya está apagado:
                           mostrarla siempre sería presionar para no tocarlo. */}
                       {!activo && o.advertencia && (
-                        <span className="mt-2 flex items-start gap-1.5 text-caption text-aviso">
+                        <span className="mt-2 flex items-start gap-1.5 text-caption text-aviso-texto">
                           <Icono nombre="reloj" size={13} className="mt-0.5" />
                           {o.advertencia}
                         </span>

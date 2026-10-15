@@ -47,7 +47,7 @@ export function BannerServicio() {
       className="mb-4 rounded-md border border-aviso/40 bg-atencion-suave px-4 py-3"
     >
       <p className="flex items-start gap-2 text-cuerpo font-semibold">
-        <span className="mt-0.5 shrink-0 text-aviso">
+        <span className="mt-0.5 shrink-0 text-aviso-texto">
           <Icono nombre="reloj" size={18} />
         </span>
         <span>
