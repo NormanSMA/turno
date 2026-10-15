@@ -14,11 +14,11 @@ qué es TURNO y quien va a tocar el código. Son documentos distintos.
 Requiere Node 20+ y Docker.
 
 ```bash
-npm install
-npm run db:up
-npm run db:migrate
-npm run db:seed
-npm run dev
+pnpm install
+pnpm db:up
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
 ```
 
 Abre <http://localhost:3000>.
@@ -50,11 +50,11 @@ puede entrar por `/acceso`. El rol decide el método.
 No hay auto-registro para estas cuentas: las crea el equipo.
 
 ```bash
-npm run cuenta -- --correo=vos@uamv.edu.ni --rol=ADMIN
+pnpm cuenta -- --correo=vos@uamv.edu.ni --rol=ADMIN
 ```
 
 ```bash
-npm run cuenta -- --correo=cocina@uamv.edu.ni --rol=COMERCIO --comercio=cafeteria-central
+pnpm cuenta -- --correo=cocina@uamv.edu.ni --rol=COMERCIO --comercio=cafeteria-central
 ```
 
 Sin `--password` se genera una y se imprime **una sola vez**. La cuenta queda
@@ -95,7 +95,7 @@ se puede escribir a la dirección con la que se creó la cuenta.
 Si están las dos configuraciones, gana SMTP.
 
 ```bash
-npm run correo:probar -- --para=vos@uamv.edu.ni
+pnpm correo:probar -- --para=vos@uamv.edu.ni
 ```
 
 Reporta el controlador activo y, si falla, el error exacto del proveedor.
@@ -112,7 +112,7 @@ de sondear desde el teléfono del estudiante — ver [ADR-14](./adr/adr-14-web-p
 y [ADR-18](./adr/adr-18-infraestructura.md).
 
 ```bash
-npm run push:claves
+pnpm push:claves
 ```
 
 Copiá el resultado a `.env`. **Sin estas variables el sistema no envía push y lo
@@ -126,7 +126,7 @@ minutos tarde es peor que no llegar.
 
 > **En desarrollo no hay push.** El service worker solo se registra en
 > producción (ver `src/lib/sw-cliente.ts`). Para probarlo de verdad:
-> `npm run build && npm start`.
+> `pnpm build && pnpm start`.
 
 > **En iPhone y iPad los avisos solo llegan si el sitio está agregado a la
 > pantalla de inicio.** Desde una pestaña de Safari no llega nada, y Chrome
@@ -137,14 +137,14 @@ minutos tarde es peor que no llegar.
 ## Pruebas
 
 ```bash
-npm test
+pnpm test
 ```
 
 Usa una base separada (`turno_test`, puerto 55433, en tmpfs) que se limpia entre
 casos. La primera vez:
 
 ```bash
-npm run test:setup
+pnpm test:setup
 ```
 
 ---
@@ -235,7 +235,7 @@ aceptación y **el archivo de prueba que lo verifica**.
 
 Una lista de viñetas sin criterio medible es el error 03 del instructivo. Lo que
 separa un 70 de un 90 es poder señalar, para cada requisito, la prueba que se
-ejecuta con `npm test`.
+ejecuta con `pnpm test`.
 
 ## Seguridad: control → evidencia
 
@@ -328,7 +328,7 @@ Nueve funciones. Si la lista crece, algo tiene que salir.
 ## Simulación (§15)
 
 ```bash
-npm run simular -- --calibrar
+pnpm simular -- --calibrar
 ```
 
 Responde lo que el piloto no puede: cuál es el Δ óptimo, qué α sirve más pedidos
@@ -354,11 +354,11 @@ el piloto los mida — están marcados como tales en el código.
 | 5 | Throughput del comercio | CSV de pedidos crudos |
 | 6 | Conversión del embudo QR | Panel, por canal; carteles en `/comercio/[slug]/carteles` |
 | 7 | Usabilidad (SUS) | `/sus` al cierre + micro-encuesta tras cada retiro |
-| 8 | Tiempo de respuesta P95 | `npm run carga` |
+| 8 | Tiempo de respuesta P95 | `pnpm carga` |
 | 9 | Integridad bajo concurrencia | `tests/concurrencia.test.ts` + control negativo |
 
 ```bash
-npm run carga -- --usuarios=40 --duracion=20
+pnpm carga -- --usuarios=40 --duracion=20
 ```
 
 Reporta P95 por endpoint, no promedio: el promedio esconde justo la cola que al
