@@ -1,67 +1,78 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# TURNO -- reglas de versionado
+#
+# Regla central: si un comando lo genera, no se versiona.
+# Se versiona lo que ninguna herramienta puede volver a producir.
 
-# dependencies
+# --- Dependencias -----------------------------------------------------------
 /node_modules
 /.pnp
 .pnp.*
+.pnpm-store/
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# --- Compilacion ------------------------------------------------------------
 /.next/
 /out/
-
-# production
 /build
+/dist
+*.tsbuildinfo
+next-env.d.ts
+/src/generated
 
-# misc
-.DS_Store
+# --- Pruebas y cobertura ----------------------------------------------------
+/coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+.stryker-tmp/
+
+# --- Entorno y secretos -----------------------------------------------------
+# Las variables reales nunca se suben. El ejemplo si.
+.env
+.env.*
+!.env.example
 *.pem
+*.key
 
-# debug
+# --- Despliegue -------------------------------------------------------------
+.vercel
+
+# --- Registros --------------------------------------------------------------
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# --- Editor y sistema operativo ---------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
 
-# vercel
-.vercel
+# --- Herramientas de asistencia ---------------------------------------------
+# Solo se versiona la configuracion compartida del servidor de vista previa.
+.claude/*
+!.claude/launch.json
+graphify-out/
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# --- Archivos temporales ----------------------------------------------------
+*.zip
+*.tmp
+/tmp/
 
-# TURNO
-.env
-.env.test
-/src/generated
-tsconfig.tsbuildinfo
-
-# ---------------------------------------------------------------------------
-# Auditoria: SALIDAS, no entradas.
-#
-# La regla es una sola: si un comando lo genera, no se versiona. Lo que se
-# queda es lo que ninguna herramienta puede volver a producir — los informes
-# escritos a mano (REPORT, RESUMEN), las reglas propias de Semgrep con sus
-# casos de prueba, la configuracion de ZAP y las excepciones del linter de
-# Design System, que el codigo lee en tiempo de ejecucion.
-#
-# Versionar las salidas cuesta 17 MB de ruido y produce diffs ilegibles cada
-# vez que alguien corre la suite.
-# ---------------------------------------------------------------------------
-tests.zip
-src.zip
-.stryker-tmp/
-
+# --- Auditoria: salidas, no entradas ----------------------------------------
+# Se quedan los informes escritos a mano (REPORT, RESUMEN), las reglas propias
+# de Semgrep con sus casos de prueba, la configuracion de ZAP y las
+# excepciones del linter de Design System, que el codigo lee al ejecutarse.
 audit/arquitectura/
 audit/baseline/
 audit/cobertura/
@@ -74,12 +85,12 @@ audit/visual/
 audit/e2e/artefactos/
 audit/e2e/informe/
 audit/e2e/resultados.json
+audit/correos/
 
-# De SAST se queda la regla, no el hallazgo.
+# SAST: se queda la regla, no el hallazgo.
 audit/sast/semgrep*.json
 audit/sast/semgrep*.txt
 
-# De ZAP se queda la configuracion, no el informe.
+# ZAP: se queda la configuracion, no el informe.
 audit/zap/informe.*
 audit/zap/salida.txt
-audit/correos/

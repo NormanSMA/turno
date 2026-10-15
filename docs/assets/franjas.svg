@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" role="img" aria-labelledby="t d">
+  <title id="t">Capacidad por franja</title>
+  <desc id="d">Seis franjas de retiro con distinto nivel de ocupacion. La franja de las 12:20 esta completa y no se ofrece.</desc>
+  <rect width="900" height="300" rx="20" fill="#F7F4EE"/>
+  <rect x="1" y="1" width="898" height="298" rx="19" fill="none" stroke="#E3D9C8" stroke-width="2"/>
+  <text x="40" y="48" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#252521">Capacidad de cocina por franja</text>
+  <text x="40" y="74" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#34483C">Solo se ofrecen las franjas que la cocina puede cumplir.</text>
+
+  <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#252521" text-anchor="middle">
+    <!-- Barras: base arena, relleno oliva animado. Altura maxima 130, base en y=250 -->
+    <g>
+      <rect x="60"  y="120" width="100" height="130" rx="10" fill="#E3D9C8"/>
+      <rect x="60"  y="250" width="100" height="0" rx="10" fill="#34483C"><animate attributeName="height" values="0;52;52" keyTimes="0;0.3;1" dur="5s" repeatCount="indefinite"/><animate attributeName="y" values="250;198;198" keyTimes="0;0.3;1" dur="5s" repeatCount="indefinite"/></rect>
+      <text x="110" y="280">12:00</text>
+    </g>
+    <g>
+      <rect x="190" y="120" width="100" height="130" rx="10" fill="#E3D9C8"/>
+      <rect x="190" y="250" width="100" height="0" rx="10" fill="#34483C"><animate attributeName="height" values="0;84;84" keyTimes="0;0.4;1" dur="5s" repeatCount="indefinite"/><animate attributeName="y" values="250;166;166" keyTimes="0;0.4;1" dur="5s" repeatCount="indefinite"/></rect>
+      <text x="240" y="280">12:10</text>
+    </g>
+    <g>
+      <rect x="320" y="120" width="100" height="130" rx="10" fill="#E3D9C8" stroke="#252521" stroke-width="2" stroke-dasharray="6 5"/>
+      <rect x="320" y="250" width="100" height="0" rx="10" fill="#252521"><animate attributeName="height" values="0;130;130" keyTimes="0;0.5;1" dur="5s" repeatCount="indefinite"/><animate attributeName="y" values="250;120;120" keyTimes="0;0.5;1" dur="5s" repeatCount="indefinite"/></rect>
+      <text x="370" y="192" fill="#F7F4EE" font-weight="600">Completa</text>
+      <text x="370" y="280">12:20</text>
+    </g>
+    <g>
+      <rect x="450" y="120" width="100" height="130" rx="10" fill="#E3D9C8"/>
+      <rect x="450" y="250" width="100" height="0" rx="10" fill="#34483C"><animate attributeName="height" values="0;104;104" keyTimes="0;0.45;1" dur="5s" repeatCount="indefinite"/><animate attributeName="y" values="250;146;146" keyTimes="0;0.45;1" dur="5s" repeatCount="indefinite"/></rect>
+      <text x="500" y="280">12:30</text>
+    </g>
+    <g>
+      <rect x="580" y="120" width="100" height="130" rx="10" fill="#E3D9C8"/>
+      <rect x="580" y="250" width="100" height="0" rx="10" fill="#34483C"><animate attributeName="height" values="0;36;36" keyTimes="0;0.35;1" dur="5s" repeatCount="indefinite"/><animate attributeName="y" values="250;214;214" keyTimes="0;0.35;1" dur="5s" repeatCount="indefinite"/></rect>
+      <text x="630" y="280">12:40</text>
+    </g>
+    <g>
+      <rect x="710" y="120" width="100" height="130" rx="10" fill="#E3D9C8"/>
+      <rect x="710" y="250" width="100" height="0" rx="10" fill="#34483C"><animate attributeName="height" values="0;18;18" keyTimes="0;0.3;1" dur="5s" repeatCount="indefinite"/><animate attributeName="y" values="250;232;232" keyTimes="0;0.3;1" dur="5s" repeatCount="indefinite"/></rect>
+      <text x="760" y="280">12:50</text>
+    </g>
+  </g>
+  <text x="850" y="48" text-anchor="end" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#34483C">Ejemplo ilustrativo</text>
+</svg>
