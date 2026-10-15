@@ -16,13 +16,17 @@ ninguna decisión — que es el error 04 del instructivo.
 | [ADR-08](adr-08-credenciales.md) | Contraseña para operación, enlace mágico para estudiantes | Aceptada |
 | [ADR-09](adr-09-separacion-funciones.md) | El administrador no opera la cocina | Aceptada |
 | [ADR-10](adr-10-simulador.md) | El simulador reutiliza el núcleo real, en TypeScript | Aceptada |
-| [ADR-11](adr-11-movimiento.md) | Movimiento con la plataforma; una sola librería de UI | Aceptada |
+| [ADR-11](adr-11-movimiento.md) | Movimiento con la plataforma; una sola librería de UI | Reemplazada por ADR-23 |
 | [ADR-12](adr-12-sin-conexion.md) | Funciona sin conexión; CSP con nonce y renderizado dinámico | Aceptada |
 | [ADR-13](adr-13-repetir-y-salir.md) | Pedir lo mismo, aviso de listo, y cerrar sesión | Aceptada |
 | [ADR-14](adr-14-web-push.md) | Web Push, y el sondeo solo con la pestaña a la vista | Aceptada |
 | [ADR-18](adr-18-infraestructura.md) | Vercel y Neon; el cómputo persistente queda como salida | Aceptada |
-| [ADR-19](adr-19-motion.md) | El motion system se implementa con la plataforma | Aceptada |
+| [ADR-19](adr-19-motion.md) | El motion system se implementa con la plataforma | Reemplazada por ADR-23 |
 | [ADR-20](adr-20-hardening.md) | Concurrencia, retención y observabilidad para producción | Aceptada |
+| [ADR-21](adr-21-capacidad-como-flujo.md) | La capacidad de cocina es un flujo, no una casilla por franja | Aceptada |
+| [ADR-22](adr-22-identidad.md) | Identidad visual de TURNO v2 | Aceptada |
+| [ADR-23](adr-23-stack-ui.md) | Stack de UI, presupuesto de JS por ruta y movimiento | Aceptada |
+| [ADR-24](adr-24-auth.md) | Better Auth detrás de una fachada | Aceptada |
 
 Los ADR 15 a 17 están reservados para las decisiones de producto ya acordadas y
 todavía no implementadas: orden multi-comercio, cupones, y la exclusión

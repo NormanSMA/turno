@@ -1,6 +1,6 @@
 # ADR-11 — Movimiento con la plataforma; una sola librería de UI
 
-**Estado:** aceptada · **Fecha:** 2026-08-24 · **Afecta:** cocina, línea de tiempo, panel de indicadores
+**Estado:** reemplazada por [ADR-23](adr-23-stack-ui.md) (propuesta, 2026-10-15) · **Fecha:** 2026-08-24 · **Afecta:** cocina, línea de tiempo, panel de indicadores
 
 ## Contexto
 

@@ -1,6 +1,6 @@
 # ADR-19 — El motion system se implementa con la plataforma
 
-**Estado:** aceptada · **Fecha:** 2026-08-28 · **Extiende:**
+**Estado:** reemplazada por [ADR-23](adr-23-stack-ui.md) (propuesta, 2026-10-15) · **Fecha:** 2026-08-28 · **Extiende:**
 [ADR-11](adr-11-movimiento.md) · **Implementa:** §16 del
 [Design System](../design-system.md)
 
