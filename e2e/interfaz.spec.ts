@@ -62,6 +62,17 @@ test.describe("accesibilidad (axe · WCAG 2.1 AA)", () => {
       await entrar(context, ESTUDIANTE);
       await page.goto(ruta);
       await page.waitForLoadState("networkidle");
+      // axe mide el color que ve en ese cuadro: a mitad de una entrada con
+      // opacidad el contraste es intermedio y la prueba fallaba al azar. Se
+      // espera a que terminen las animaciones finitas.
+      await page.evaluate(() =>
+        Promise.allSettled(
+          document
+            .getAnimations()
+            .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+            .map((a) => a.finished),
+        ),
+      );
 
       const { violations } = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

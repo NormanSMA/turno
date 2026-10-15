@@ -99,3 +99,25 @@ Orden: tokens, logo y mascota, personajes y gráficos.
 10. `docs/design-system.md` §1b, §2.
 
 **Cierre de la fase 3:** 4 piezas mostradas antes del resto, contraste AA medido con axe y licencias registradas.
+
+## Resultado de la primera entrega de la fase 3 (2026-10-15)
+Medido con WCAG antes de aplicar. Los pares que el plan dejó sin cifra:
+
+| Par | Contraste | Decisión |
+|---|---|---|
+| carbón sobre arena | 11.01 | Texto permitido |
+| rojo sobre arena | 4.15 | No usar para texto. El tinte de error claro es `#f5e9e4` (rojo 4.88) |
+| arena sobre carbón | 11.01 | Texto permitido en oscuro |
+| rojo sobre carbón | 2.65 | Falla. En oscuro el error es `#ff6b5e` (5.51 sobre carbón) |
+| oliva sobre carbón | 1.57 | Oliva nunca es texto ni borde sobre carbón |
+| dorado sobre oliva | 3.25 | Solo iconos y decoración |
+| ámbar sobre crema | 2.13 | Ámbar nunca es texto sobre crema. Con texto carbón encima da 6.59 |
+
+Tonos derivados (mezclas de la paleta, no colores nuevos): `superficie-3` claro `#d9cfbd`, tinte de error claro `#f5e9e4`, tinte de dorado `#ede5d8`, y en oscuro superficies `#2d3e34` y `#3d5346`, borde `#4b6154`.
+
+Excepciones fuera de la paleta fija, decididas para cumplir AA en oscuro:
+- Relleno de acción en oscuro `#5a7a66` (oliva aclarado; blanco encima 4.76) y texto de marca `#a8cbb5` (8.70 sobre carbón).
+- Error en oscuro `#ff6b5e` y su tinte `#3a1a17`.
+
+Hecho: tokens en `globals.css` (claro y oscuro unificados en un bloque), logo SVG `MarcaTurno`, mascota `MascotaTurno`, iconos PWA regenerados, `theme_color` y `background_color`, página `/identidad`.
+Pendiente: personajes de Open Peeps (descarga con confirmación), colores fijos de `graficos.tsx`, correo (`correo-plantilla.ts`, `banda.png`, `beneficios.png`), `ComparacionReceso.tsx`, reglas nuevas del linter, instantáneas visuales (6 fallan por el cambio de paleta; sin regenerar).

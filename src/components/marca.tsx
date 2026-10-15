@@ -1,64 +1,54 @@
-import Image from "next/image";
-
 /**
- * Marca de TURNO.
+ * Marca de TURNO (ADR-22).
  *
- * El isotipo es la T convertida en bolsa de comida en movimiento: el travesaño
- * se enrolla como una hoja, la bolsa con el tenedor se apoya a la derecha y
- * tres líneas de velocidad entran por la izquierda.
+ * El isotipo es un reloj con una franja marcada: el producto no vende comida,
+ * vende una hora de retiro dentro de la capacidad de la cocina. Sin bolsa ni
+ * líneas de velocidad, que era lo que lo acercaba a las apps de entrega.
  *
- * ## Por qué dejó de ser un SVG dibujado a mano
- *
- * Lo estaba, por peso, herencia de color y escala. El problema es que había
- * **tres versiones distintas del mismo logo**: este trazo, otro en
- * `icono-marca.ts` para el favicon, y la ilustración del correo. Ninguna
- * coincidía con las otras, así que la marca se veía diferente según dónde se
- * mirara — que es justo lo que una marca no puede hacer.
- *
- * El PNG resuelve eso: **un solo archivo es la marca**, y el favicon, la
- * cabecera y el correo salen todos de él. Se paga con ~9 KB, que `next/image`
- * sirve como WebP y el navegador cachea. La consistencia vale más.
- *
- * ## Sobre el color en modo oscuro
- *
- * El SVG heredaba los tokens y se aclaraba solo; este no. No hace falta: el
- * rojo del isotipo es luminoso y el fondo oscuro es #101010, así que el
- * contraste sobra en los dos temas.
+ * Es un SVG en código y no un PNG: hereda el color del texto (`currentColor`
+ * para el aro y la manecilla) y el dorado de fidelidad para la franja, así que
+ * sigue la paleta en claro y en oscuro sin archivos aparte. El favicon sale de
+ * la misma geometría (`src/app/icon.svg`).
  */
 
-/**
- * Proporción real del archivo, medida sobre el PNG ya recortado.
- *
- * Está en una constante y no incrustada en el JSX para que sea un solo punto
- * de corrección: si alguien reemplaza el archivo por uno de otra forma, el
- * logo se deforma en cinco pantallas a la vez y este número es lo único que
- * hay que tocar.
- */
-const PROPORCION = 148 / 120;
-
-/**
- * `size` es la **altura**, no el lado.
- *
- * El isotipo es apaisado. Si `size` fuese el ancho, el logo encogería al
- * ponerlo junto a texto de la misma altura nominal y quedaría descuadrado
- * contra la palabra en `LogotipoTurno`.
- */
+/** Geometría compartida con `src/app/icon.svg`: centro 32,32, radio 26. */
 export function MarcaTurno({
   size = 40,
   className = "",
+  titulo = "TURNO",
 }: {
   size?: number;
   className?: string;
+  /** Texto accesible. Vacío para que el logo sea decorativo. */
+  titulo?: string;
 }) {
   return (
-    <Image
-      src="/marca/isotipo.png"
-      alt="TURNO"
-      width={Math.round(size * PROPORCION)}
+    <svg
+      viewBox="0 0 64 64"
+      width={size}
       height={size}
       className={`shrink-0 ${className}`}
-      priority
-    />
+      role={titulo ? "img" : undefined}
+      aria-label={titulo || undefined}
+      aria-hidden={titulo ? undefined : true}
+    >
+      <circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" strokeWidth="5" />
+      <path
+        d="M32 6 A26 26 0 0 1 54.52 45"
+        fill="none"
+        stroke="var(--color-fidelidad)"
+        strokeWidth="9"
+        strokeLinecap="round"
+      />
+      <path
+        d="M32 32 L46.72 40.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <circle cx="32" cy="32" r="3.5" fill="currentColor" />
+    </svg>
   );
 }
 
@@ -93,7 +83,7 @@ export function LogotipoTurno({
             className="mt-1 font-semibold uppercase leading-none tracking-[0.28em] text-texto-2"
             style={{ fontSize: Math.max(7, size * 0.2) }}
           >
-            Pide · Recoge · Disfruta
+            Pedí · Llegá · Retirá
           </span>
         )}
       </span>
@@ -196,12 +186,12 @@ export function CabeceraTurno({
   className?: string;
 }) {
   return (
-    <div className={`relative overflow-hidden bg-[#171717] ${className}`}>
+    <div className={`relative overflow-hidden bg-cocina ${className}`}>
       <div
         className="absolute inset-0"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(90deg, rgba(255,255,255,.055) 0 1px, transparent 1px 68px)",
+            "repeating-linear-gradient(90deg, rgba(247,244,238,.07) 0 1px, transparent 1px 68px)",
         }}
         aria-hidden
       />
@@ -209,7 +199,7 @@ export function CabeceraTurno({
         className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full"
         style={{
           background:
-            "radial-gradient(circle, rgba(201,21,37,.42) 0%, transparent 70%)",
+            "radial-gradient(circle, rgba(182,141,89,.32) 0%, transparent 70%)",
         }}
         aria-hidden
       />

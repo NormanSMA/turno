@@ -41,36 +41,38 @@
      resuelto abajo).
      ================================================================== */
   /* Relleno de botón, chip activo, punto de contador. Texto blanco encima. */
-  --color-marca-fondo: #c91525;
+  --color-marca-fondo: #34483c;
   /* Tipografía, iconos, bordes y subrayados sobre el fondo de la página. */
-  --color-marca-texto: #c91525;
+  --color-marca-texto: #34483c;
   /* Obsoleto: alias de `--color-marca-texto`. No usar en código nuevo; queda
      para que nada se rompa si algún uso se escapó de la migración. */
   --color-marca: var(--color-marca-texto);
-  --color-marca-fuerte: #a81020;
-  --color-marca-suave: #fdeaec;
+  --color-marca-fuerte: #252521;
+  --color-marca-suave: #e3d9c8;
 
   /* Semánticos de estado. Cada uno significa UNA cosa. */
   /* Estaba en #258a4b: 4.36:1 sobre blanco (pasa) pero 3.77:1 sobre su propio
      --color-exito-suave, que es donde de verdad se usa —el chip de "abierto"—.
      #1e7340 da 5.06:1 sobre el suave y 5.86:1 sobre blanco. */
-  --color-exito: #1e7340;
-  --color-exito-suave: #e3f2e8;
-  --color-atencion: #f2b84b;
-  --color-atencion-suave: #fdf3e0;
-  --color-error: #d92d20;
-  --color-error-suave: #fdeae8;
+  --color-exito: #34483c;
+  --color-exito-suave: #e3d9c8;
+  --color-atencion: #b68d59;
+  --color-atencion-suave: #ede5d8;
+  --color-error: #c91525;
+  --color-error-suave: #f5e9e4;
   --color-aviso: #e49b19;
+  /* Fidelidad (ADR-22): hábito, favoritos, código de retiro. Decorativo, nunca texto sobre crema. */
+  --color-fidelidad: #b68d59;
 
   /* ==================================================================
      SUPERFICIES — fondo, superficie, superficie elevada.
      La profundidad se construye con nivel + borde, no con sombras grandes.
      ================================================================== */
-  --color-fondo: #f7f7f5;
-  --color-superficie: #ffffff;
-  --color-superficie-2: #f1f2f0;
-  --color-superficie-3: #e9eae7;
-  --color-borde: #e4e4e1;
+  --color-fondo: #f7f4ee;
+  --color-superficie: #f7f4ee;
+  --color-superficie-2: #e3d9c8;
+  --color-superficie-3: #d9cfbd;
+  --color-borde: #e3d9c8;
 
   /*
    * Texto: tres niveles y nada más.
@@ -81,9 +83,9 @@
    * hay que leer. `#757575` da 4.61:1 y sigue siendo visiblemente el más
    * apagado de los tres.
    */
-  --color-texto: #171717;  /* 17.93:1 */
-  --color-texto-2: #6b6b6b; /*  5.33:1 */
-  --color-texto-3: #757575; /*  4.61:1 */
+  --color-texto: #252521;  /* 14.01:1 sobre crema */
+  --color-texto-2: #34483c; /*  8.95:1 sobre crema */
+  --color-texto-3: #34483c; /* alias de texto-2 (ADR-22: dos niveles) */
 
   /* ==================================================================
      ALIAS DE COMPATIBILIDAD
@@ -118,10 +120,10 @@
 
   /* Cocina: pantalla fija, a un metro, con calor y prisa. Es el modo oscuro
      del sistema aplicado a otro contexto, no una paleta aparte. */
-  --color-cocina: #101010;
-  --color-cocina-alto: #181818;
-  --color-cocina-borde: #303030;
-  --color-cocina-tinta: #b7b7b7;
+  --color-cocina: #252521;
+  --color-cocina-alto: #34483c;
+  --color-cocina-borde: #4b6154;
+  --color-cocina-tinta: #e3d9c8;
 
   /* ==================================================================
      TIPOGRAFIA — una sola familia, contraste fuerte de pesos.
@@ -160,9 +162,9 @@
      SOMBRAS — muy ligeras. Se usan sm y md; lg solo en modales.
      Una tarjeta normal funciona con superficie + borde, sin sombra.
      ================================================================== */
-  --shadow-sm: 0 1px 2px rgba(23, 23, 23, 0.05);
-  --shadow-md: 0 4px 12px -2px rgba(23, 23, 23, 0.08);
-  --shadow-lg: 0 12px 32px -8px rgba(23, 23, 23, 0.16);
+  --shadow-sm: 0 1px 2px rgba(37, 37, 33, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(37, 37, 33, 0.08);
+  --shadow-lg: 0 12px 32px -8px rgba(37, 37, 33, 0.16);
 
   /* ==================================================================
      MOTION — la animación explica, no distrae.
@@ -187,34 +189,34 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="claro"]) {
-    --color-fondo: #101010;
-    --color-superficie: #181818;
-    --color-superficie-2: #222222;
-    --color-superficie-3: #2a2a2a;
-    --color-borde: #303030;
-    --color-texto: #ffffff;
-    --color-texto-2: #b7b7b7; /* 8.85:1 sobre superficie */
-    /* Estaba en #777777 y daba 3.97:1: el mismo defecto que en claro, pero
-       nadie lo había medido porque la auditoría de accesibilidad corre en modo
-       claro. #8a8a8a da 5.14:1. */
-    --color-texto-3: #8a8a8a; /* 5.14:1 sobre superficie */
-    /* T-20 RESUELTO: partido en dos.
-       Un solo valor no podía servir para los dos papeles. Medido:
-         #f04352 con blanco encima .. 3.73:1  falla AA
-         #f04352 como texto sobre #181818 .. 4.76:1  pasa
-         #d42d40 con blanco encima .. 4.94:1  pasa
-         #d42d40 como texto sobre #181818 .. 3.59:1  falla
-       Cada token toma el valor que su papel exige. */
-    --color-marca-fondo: #d42d40;
-    --color-marca-texto: #f04352;
+    --color-fondo: #252521;
+    --color-superficie: #34483c;
+    --color-superficie-2: #2d3e34;
+    --color-superficie-3: #3d5346;
+    --color-borde: #4b6154;
+    --color-texto: #f7f4ee; /* 14.01:1 sobre fondo, 8.95:1 sobre superficie */
+    --color-texto-2: #e3d9c8; /* 11.01:1 sobre fondo, 7.03:1 sobre superficie */
+    --color-texto-3: #e3d9c8;
+    /* ADR-22 (fase 3): oliva aclarado para el modo oscuro. Medido:
+         relleno #5a7a66 con blanco encima .. 4.76:1  pasa AA
+         relleno #5a7a66 sobre el fondo .... 3.23:1  borde visible
+         texto #a8cbb5 sobre el fondo ...... 8.70:1; sobre superficie 5.55:1 */
+    --color-marca-fondo: #5a7a66;
+    --color-marca-texto: #a8cbb5;
     --color-marca: var(--color-marca-texto);
-    --color-marca-fuerte: #ff6472;
-    --color-marca-suave: #2a1416;
-    --color-exito: #45b672;
-    --color-exito-suave: #12251a;
-    --color-atencion-suave: #2a2216;
-    --color-error: #f0564a;
-    --color-error-suave: #2b1512;
+    --color-marca-fuerte: #4a6654;
+    --color-marca-suave: #2d3e34;
+    --color-exito: #a8cbb5;
+    --color-exito-suave: #2d3e34;
+    --color-atencion-suave: #3a3426;
+    /* Rojo aclarado fuera de la paleta: #c91525 sobre carbón da 2.65:1.
+       #ff6b5e da 5.51:1 sobre el fondo y 5.61:1 sobre su tinte. */
+    --color-error: #ff6b5e;
+    --color-error-suave: #3a1a17;
+    --color-cocina: #252521;
+    --color-cocina-alto: #34483c;
+    --color-cocina-borde: #4b6154;
+    --color-cocina-tinta: #e3d9c8;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
@@ -222,31 +224,34 @@
 }
 
 :root[data-tema="oscuro"] {
-  --color-fondo: #101010;
-  --color-superficie: #181818;
-  --color-superficie-2: #222222;
-  --color-superficie-3: #2a2a2a;
-  --color-borde: #303030;
-  --color-texto: #ffffff;
-  --color-texto-2: #b7b7b7; /* 8.85:1 sobre superficie */
-  --color-texto-3: #8a8a8a; /* 5.14:1 sobre superficie */
-    /* T-20 RESUELTO: partido en dos.
-       Un solo valor no podía servir para los dos papeles. Medido:
-         #f04352 con blanco encima .. 3.73:1  falla AA
-         #f04352 como texto sobre #181818 .. 4.76:1  pasa
-         #d42d40 con blanco encima .. 4.94:1  pasa
-         #d42d40 como texto sobre #181818 .. 3.59:1  falla
-       Cada token toma el valor que su papel exige. */
-    --color-marca-fondo: #d42d40;
-    --color-marca-texto: #f04352;
-    --color-marca: var(--color-marca-texto);
-  --color-marca-fuerte: #ff6472;
-  --color-marca-suave: #2a1416;
-  --color-exito: #45b672;
-  --color-exito-suave: #12251a;
-  --color-atencion-suave: #2a2216;
-  --color-error: #f0564a;
-  --color-error-suave: #2b1512;
+  --color-fondo: #252521;
+  --color-superficie: #34483c;
+  --color-superficie-2: #2d3e34;
+  --color-superficie-3: #3d5346;
+  --color-borde: #4b6154;
+  --color-texto: #f7f4ee; /* 14.01:1 sobre fondo, 8.95:1 sobre superficie */
+  --color-texto-2: #e3d9c8; /* 11.01:1 sobre fondo, 7.03:1 sobre superficie */
+  --color-texto-3: #e3d9c8;
+  /* ADR-22 (fase 3): oliva aclarado para el modo oscuro. Medido:
+       relleno #5a7a66 con blanco encima .. 4.76:1  pasa AA
+       relleno #5a7a66 sobre el fondo .... 3.23:1  borde visible
+       texto #a8cbb5 sobre el fondo ...... 8.70:1; sobre superficie 5.55:1 */
+  --color-marca-fondo: #5a7a66;
+  --color-marca-texto: #a8cbb5;
+  --color-marca: var(--color-marca-texto);
+  --color-marca-fuerte: #4a6654;
+  --color-marca-suave: #2d3e34;
+  --color-exito: #a8cbb5;
+  --color-exito-suave: #2d3e34;
+  --color-atencion-suave: #3a3426;
+  /* Rojo aclarado fuera de la paleta: #c91525 sobre carbón da 2.65:1.
+     #ff6b5e da 5.51:1 sobre el fondo y 5.61:1 sobre su tinte. */
+  --color-error: #ff6b5e;
+  --color-error-suave: #3a1a17;
+  --color-cocina: #252521;
+  --color-cocina-alto: #34483c;
+  --color-cocina-borde: #4b6154;
+  --color-cocina-tinta: #e3d9c8;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
