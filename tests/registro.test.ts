@@ -107,7 +107,7 @@ describe("la ruta se agrupa por forma, no por identificador", () => {
 });
 
 describe("el identificador de petición", () => {
-  it("se lee de la cabecera que pone el middleware", () => {
+  it("se lee de la cabecera que pone el proxy", () => {
     const req = new Request("http://x/", { headers: { "x-request-id": "abc" } });
     expect(peticionIdDe(req)).toBe("abc");
   });

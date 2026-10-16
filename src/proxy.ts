@@ -15,7 +15,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * respuesta y ninguno más. `'strict-dynamic'` deja que esos carguen sus
  * fragmentos sin enumerar cada archivo.
  *
- * **En el middleware** porque un valor por respuesta no sale de un archivo
+ * **En el proxy (antes `middleware`, renombrado en Next 16)** porque un valor por respuesta no sale de un archivo
  * estático. El precio es perder el caché estático de estas páginas; los assets
  * de `/_next/static` no pasan por acá (ver `matcher`).
  */
@@ -26,7 +26,7 @@ function generarNonce(): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
-export function middleware(peticion: NextRequest) {
+export function proxy(peticion: NextRequest) {
   const nonce = generarNonce();
   const desarrollo = process.env.NODE_ENV !== "production";
 

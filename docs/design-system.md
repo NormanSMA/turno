@@ -1,4 +1,4 @@
-# TURNO — Design System v1.0
+# TURNO — Design System v2.0 · Gourmet Minimal
 
 > **No estamos diseñando una página web para pedir comida. Estamos diseñando
 > una experiencia para que un estudiante pueda pedir su comida antes del receso
@@ -14,6 +14,11 @@ mandan sobre cualquier preferencia estética:
 
 Este documento es normativo. Todo lo que se construya tiene que cumplirlo.
 La implementación de los tokens vive en `src/app/globals.css`.
+
+> **v2 (2026-10-15).** La identidad cambió con el [ADR-22](adr/adr-22-identidad.md): paleta
+> Gourmet Minimal, logo de reloj, mascota y personajes. El stack de UI y el movimiento
+> están en el [ADR-23](adr/adr-23-stack-ui.md). Las versiones anteriores de las secciones
+> 1b, 2 y 16 quedaron reemplazadas.
 
 ---
 
@@ -78,18 +83,19 @@ puede animar. Todo símbolo sale de `src/components/iconos.tsx`.
 
 ## 1b. Marca
 
-El isotipo es la **T convertida en bolsa de comida en movimiento**: el travesaño
-se enrolla, el asta baja hasta un pie curvo, la bolsa con el tenedor se apoya a
-la derecha y tres líneas ámbar de velocidad entran por la izquierda.
+El isotipo es un **reloj con una franja marcada**: TURNO no vende comida, vende una
+hora de retiro dentro de la capacidad de la cocina. Sin bolsa ni líneas de velocidad:
+eran lo que lo acercaba a las apps de entrega.
 
-Lema: **Pide · Recoge · Disfruta**
+Lema: **Pedí · Llegá · Retirá**
 
 Está dibujado en SVG (`src/components/marca.tsx`), no importado como PNG:
 
-- **peso** — cero kilobytes; un PNG a 3× son ~40 KB en cada primera carga
-- **color** — hereda los tokens, así que en modo oscuro el rojo se aclara solo
-- **escala** — el mismo archivo sirve para el favicon de 16 px y para el cartel
-  impreso
+- **peso** — cero kilobytes; no hay archivo que descargar
+- **color** — el aro y la manecilla usan `currentColor` y la franja el dorado de
+  fidelidad, así que sigue el tema claro y el oscuro sin una segunda versión
+- **escala** — la misma geometría sirve para el favicon de 16 px y para el cartel
+  impreso (`src/app/icon.png` y `apple-icon.png` salen de ella)
 
 Componentes: `MarcaTurno` (isotipo), `LogotipoTurno` (isotipo + palabra, con
 `conLema` opcional), `CabeceraTurno` (fondo de cabecera), `MedidorFranja`
@@ -98,6 +104,17 @@ Componentes: `MarcaTurno` (isotipo), `LogotipoTurno` (isotipo + palabra, con
 **El degradado está permitido en la marca** y en elementos decorativos. Sigue
 prohibido en botones, inputs, tarjetas normales, navegación y texto.
 
+### Mascota y personajes
+
+- **Mascota "turno"** (`src/components/mascota/Turno.tsx`): el reloj con piernas. Cuatro
+  estados: `saluda`, `listo`, `espera` y `error`, más gorro de cocina opcional. Se anima
+  con Motion sobre las partes del SVG (parpadeo, brazo).
+- **Personajes** (`src/components/mascota/Personaje.tsx`): estudiante y cocinero de
+  [Open Peeps](https://www.openpeeps.com) (CC0), recoloreados con variables CSS y con
+  accesorios propios (mochila, delantal, gorro). Viven en `public/personajes/`.
+- Origen y licencia de cada archivo: [`licencias-assets.md`](licencias-assets.md).
+- La página `/identidad` muestra la paleta, el logo, la mascota y los personajes.
+
 ---
 
 ## 2. Color
@@ -105,53 +122,71 @@ prohibido en botones, inputs, tarjetas normales, navegación y texto.
 ### 2.1 Regla de proporción
 
 ```
-80%  neutrales
-15%  superficies / secundarios
- 5%  color de acción
+80%  neutrales  (crema y carbón)
+15%  superficies / secundarios  (arena)
+ 5%  color de acción  (oliva)
 ```
 
-**El color de marca debe destacar, no dominar.** Una pantalla con rojo, verde,
-amarillo y naranja a la vez no tiene acento: tiene ruido.
+**El color de acción debe destacar, no dominar.** Cada color tiene un papel:
+
+| Color | Papel |
+|---|---|
+| Oliva `#34483C` | Acción: botón primario, navegación activa, franja activa, estado listo |
+| Dorado `#B68D59` | Fidelidad y destacado. **Nunca texto** (2.76:1 sobre crema) |
+| Rojo `#C91525` | **Solo urgencia**: error, aviso de urgencia, problema en cocina |
+| Ámbar `#E49B19` | **Solo atención**: en preparación, advertencia |
+
+Una pantalla con oliva, rojo, dorado y ámbar a la vez no tiene acento: tiene ruido.
 
 ### 2.2 Tokens — claro
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--color-marca` | `#C91525` | botón primario, navegación activa, CTA, selección |
-| `--color-marca-fuerte` | `#A81020` | estado presionado |
-| `--color-marca-suave` | `#FDEAEC` | fondo de resaltado |
-| `--color-exito` | `#258A4B` | disponible, listo, confirmado |
-| `--color-atencion` | `#F2B84B` | promoción, destacado |
-| `--color-error` | `#D92D20` | error, rechazo, acción destructiva |
-| `--color-aviso` | `#E49B19` | advertencia, en preparación |
-| `--color-fondo` | `#F7F7F5` | fondo de la aplicación |
-| `--color-superficie` | `#FFFFFF` | tarjetas, barras |
-| `--color-superficie-2` | `#F1F2F0` | superficie hundida, hover |
-| `--color-superficie-3` | `#E9EAE7` | separadores llenos |
-| `--color-borde` | `#E4E4E1` | bordes |
-| `--color-texto` | `#171717` | texto principal |
-| `--color-texto-2` | `#6B6B6B` | secundario |
-| `--color-texto-3` | `#757575` | apagado — 4.61:1, el mínimo que pasa AA. Estaba en `#9A9A9A` (2.81:1) y lo marcó axe. |
+| `--color-marca-fondo` | `#34483C` | relleno de botón, chip activo (oliva) |
+| `--color-marca-texto` | `#34483C` | letra, iconos y subrayados de marca |
+| `--color-marca-fuerte` | `#252521` | estado presionado |
+| `--color-marca-suave` | `#E3D9C8` | fondo de resaltado |
+| `--color-exito` | `#34483C` | disponible, listo, confirmado |
+| `--color-atencion` | `#B68D59` | promoción, destacado (sin texto) |
+| `--color-fidelidad` | `#B68D59` | hábito, favoritos, código de retiro |
+| `--color-error` | `#C91525` | error, rechazo, acción destructiva (5.29:1 sobre crema) |
+| `--color-error-suave` | `#F5E9E4` | fondo de error (el rojo da 4.88:1 encima) |
+| `--color-aviso` | `#E49B19` | advertencia, en preparación (relleno, borde, icono) |
+| `--color-aviso-texto` | `#7F5300` | ámbar **como letra** sobre claro (6.09:1) |
+| `--color-fondo` | `#F7F4EE` | fondo de la aplicación (crema) |
+| `--color-superficie` | `#F7F4EE` | tarjetas, barras: se separan con borde, no con blanco |
+| `--color-superficie-2` | `#E3D9C8` | superficie hundida, hover (arena) |
+| `--color-superficie-3` | `#D9CFBD` | separadores llenos |
+| `--color-borde` | `#E3D9C8` | bordes |
+| `--color-texto` | `#252521` | texto principal (14.01:1) |
+| `--color-texto-2` | `#34483C` | secundario (8.95:1) |
+| `--color-texto-3` | `#34483C` | alias de `texto-2`: dos niveles de texto |
+
+Contrastes medidos que mandan: carbón sobre arena 11.01, oliva sobre arena 7.03, rojo
+sobre arena **4.15 (no sirve para letra)**, dorado sobre carbón 5.09, ámbar sobre crema
+**2.13 (no sirve para letra)**. El linter prohíbe `text-aviso`, `text-atencion` y
+`text-fidelidad`.
 
 ### 2.3 Tokens — oscuro
 
-**No es una inversión.** El fondo no es negro puro, las superficies suben en
-pasos, y el rojo se **aclara** porque `#C91525` sobre fondo oscuro pierde
-legibilidad.
+**No es una inversión.** El fondo es carbón, las superficies son oliva y el acento es
+dorado. Dos valores salen de la paleta fija para cumplir AA y están justificados en el
+ADR-22: el oliva se aclara y el rojo también.
 
 | Token | Valor |
 |---|---|
-| `--color-fondo` | `#101010` |
-| `--color-superficie` | `#181818` |
-| `--color-superficie-2` | `#222222` |
-| `--color-superficie-3` | `#2A2A2A` |
-| `--color-borde` | `#303030` |
-| `--color-texto` | `#FFFFFF` |
-| `--color-texto-2` | `#B7B7B7` |
-| `--color-texto-3` | `#777777` |
-| `--color-marca` | `#F04352` |
-| `--color-exito` | `#45B672` |
-| `--color-error` | `#F0564A` |
+| `--color-fondo` | `#252521` |
+| `--color-superficie` | `#34483C` |
+| `--color-superficie-2` | `#2D3E34` |
+| `--color-superficie-3` | `#3D5346` |
+| `--color-borde` | `#4B6154` |
+| `--color-texto` | `#F7F4EE` |
+| `--color-texto-2` | `#E3D9C8` |
+| `--color-marca-fondo` | `#5A7A66` (blanco encima: 4.76:1) |
+| `--color-marca-texto` | `#A8CBB5` (8.70:1 sobre el fondo) |
+| `--color-exito` | `#A8CBB5` |
+| `--color-error` | `#FF6B5E` (el `#C91525` da 2.65:1 sobre carbón) |
+| `--color-aviso-texto` | `#F2B84B` |
 
 ### 2.4 Los tres estados del tema
 
@@ -384,7 +419,7 @@ Inicio    Explorar    Pedidos    Perfil
 **Nunca** esconder la navegación principal detrás de un icono de hamburguesa en
 móvil. Tiene que estar a un toque, siempre visible.
 
-El punto rojo de avisos sin leer se consulta al montar y al volver a la
+El punto de avisos sin leer se consulta al montar y al volver a la
 pestaña, **nunca en un intervalo**: un contador que sondea en todas las
 pantallas sería exactamente el gasto que el ADR-14 vino a eliminar.
 
@@ -440,6 +475,8 @@ la pantalla de confirmación.
 | `--motion-rapido` | 130 ms | microinteracciones |
 | `--motion-normal` | 220 ms | cambio de estado o componente |
 | `--motion-lento` | 340 ms | modal, transición de pantalla |
+
+**Cómo se anima (ADR-23).** Entre rutas, View Transitions. En la navegación (dock) y en lo simple, CSS con transform y opacidad. Motion (`LazyMotion` y `m`, envuelto en `ConMovimiento`) solo donde hay mascota, personajes o un resorte que CSS no da. Con `prefers-reduced-motion` todo degrada al resultado final.
 
 **Se anima:** entrada y salida, cambios de estado, botones, carrito, progreso,
 navegación.
@@ -731,3 +768,8 @@ desktop-first
 | Checkout en un paso | pendiente |
 | Favoritos | pendiente |
 | Fotografía uniforme del catálogo | pendiente |
+| Paleta Gourmet Minimal, claro y oscuro (ADR-22) | **hecho** |
+| Logo de reloj, mascota y personajes Open Peeps | **hecho** |
+| shadcn/ui, Drawer (Vaul), Sonner y charts (ADR-23) | **hecho** |
+| Dock móvil flotante con el estado del pedido | **hecho** |
+| Gráficos del panel con Recharts y tokens | **hecho** |

@@ -7,7 +7,7 @@
  * Cuando algo falla en producción, lo que se necesita no es un mensaje bonito
  * — es poder preguntar *"¿qué más pasó en esta misma petición?"*.
  *
- * De ahí el `peticionId`: se genera una vez en el middleware, viaja en la
+ * De ahí el `peticionId`: se genera una vez en el proxy, viaja en la
  * cabecera y aparece en todo lo que se registre durante esa petición. También
  * vuelve al cliente en `x-request-id`, así que un estudiante que reporta un
  * error puede dar un identificador y eso alcanza para encontrar la traza.
@@ -24,7 +24,7 @@
 type Nivel = "info" | "aviso" | "error";
 
 export interface Contexto {
-  /** Identificador de la petición. Lo pone el middleware. */
+  /** Identificador de la petición. Lo pone el proxy. */
   peticionId?: string;
   /** Ruta sin parámetros: `/api/pedidos`, no `/api/pedidos/abc-123`. */
   ruta?: string;
@@ -83,7 +83,7 @@ export function error(evento: string, e: unknown, ctx?: Contexto) {
 }
 
 /**
- * Lee el identificador que el middleware puso en la petición.
+ * Lee el identificador que el proxy puso en la petición.
  *
  * Devuelve `undefined` en vez de inventar uno: un identificador fabricado acá
  * no coincidiría con el que el cliente recibió, y un identificador que no se

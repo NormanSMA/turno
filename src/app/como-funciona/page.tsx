@@ -21,7 +21,7 @@ import { Icono } from "@/components/iconos";
  * un toque de distancia, para quien la quiera.
  *
  * Es una página de servidor sin datos: no consulta la base ni la sesión. Sale
- * dinámica igual, porque el middleware le pone un nonce por respuesta, pero no
+ * dinámica igual, porque el proxy le pone un nonce por respuesta, pero no
  * gasta una sola consulta.
  */
 export const metadata: Metadata = {

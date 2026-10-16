@@ -7,7 +7,7 @@ import type { NextConfig } from "next";
  * despliegue cambia de Vercel a otra cosa, las protecciones no se quedan atrás.
  *
  * La CSP **ya no está acá**: necesita un nonce distinto por respuesta y eso no
- * cabe en un archivo de configuración estático. Vive en `src/middleware.ts`,
+ * cabe en un archivo de configuración estático. Vive en `src/proxy.ts`,
  * que explica el porqué y el error que corrige. Declararla en los dos lados
  * sería peor que en uno: dos cabeceras CSP se intersecan, y la fija sin nonce
  * volvería a bloquear los scripts de Next.
