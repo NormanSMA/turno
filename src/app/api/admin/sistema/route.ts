@@ -14,6 +14,7 @@
 import { prisma } from "@/lib/db";
 import { exigirRol } from "@/lib/auth";
 import { manejarError, ok } from "@/lib/http";
+import { resumirBandeja } from "@/core/outbox-resumen";
 import {
   desviosPorComercio,
   desviosPorProducto,
@@ -61,6 +62,7 @@ export async function GET(req: Request) {
       suscripciones,
       auditoria,
       sesionesVivas,
+      filasBandeja,
     ] = await Promise.all([
       prisma.franja.findMany({
         where: { inicio: { gte: desde } },
@@ -99,6 +101,23 @@ export async function GET(req: Request) {
       }),
       prisma.session.count({
         where: { expiresAt: { gt: new Date() } },
+      }),
+      prisma.notificacion.findMany({
+        where: {
+          OR: [
+            { estado: { not: "ENVIADA" } },
+            { enviadaEn: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+          ],
+        },
+        select: {
+          canal: true,
+          estado: true,
+          intentos: true,
+          ultimoError: true,
+          reclamadaEn: true,
+          creadaEn: true,
+          enviadaEn: true,
+        },
       }),
     ]);
 
@@ -148,6 +167,7 @@ export async function GET(req: Request) {
         franjas: franjas.length,
         pedidos: pedidos.length,
       },
+      bandeja: resumirBandeja(filasBandeja, new Date()),
       presion: presionPorComercio(paraPresion),
       embudo: embudoOperativo(pedidos.map((p) => p.estado)),
       calibracion: {

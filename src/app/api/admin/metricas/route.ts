@@ -11,12 +11,16 @@
  */
 import { prisma } from "@/lib/db";
 import { exigirRol } from "@/lib/auth";
-import { manejarError, ok } from "@/lib/http";
+import { z } from "zod";
+import { fallo, manejarError, ok } from "@/lib/http";
+import {
+  cargaPorHoraSql,
+  conteosSql,
+  cumplimientoPorDiaSql,
+} from "@/lib/metricas-sql";
 import { aCsv, nombreArchivo } from "@/core/csv";
 import {
-  cargaPorHoraDelDia,
   compararAB,
-  cumplimientoPorDia,
   embudoPorCanal,
   tiempoActivacionMedianaMin,
   type PedidoMetrica,
@@ -27,6 +31,18 @@ import {
   resumirMicro,
   resumirSus,
 } from "@/core/encuestas";
+
+const DIA_MS = 86_400_000;
+
+const fechaIso = z
+  .string()
+  .refine((s) => !Number.isNaN(Date.parse(s)), "Fecha ISO inválida");
+
+const parametros = z.object({
+  desde: fechaIso.optional(),
+  hasta: fechaIso.optional(),
+  comercio: z.string().min(1).max(100).optional(),
+});
 
 export async function GET(req: Request) {
   try {
@@ -47,7 +63,29 @@ export async function GET(req: Request) {
      * de verificar con una prueba, que es justo lo que las hace defendibles.
      * Lo que no hacía falta era traer columnas que nadie mira.
      */
+    const url = new URL(req.url);
+    const parsed = parametros.safeParse(Object.fromEntries(url.searchParams));
+    if (!parsed.success) {
+      return fallo("RANGO_INVALIDO", parsed.error.issues[0]!.message, 400);
+    }
+    const hasta = parsed.data.hasta ? new Date(parsed.data.hasta) : new Date();
+    const desde = parsed.data.desde
+      ? new Date(parsed.data.desde)
+      : new Date(hasta.getTime() - 30 * DIA_MS);
+    if (desde >= hasta) {
+      return fallo("RANGO_INVALIDO", "`desde` debe ser anterior a `hasta`", 400);
+    }
+    if (hasta.getTime() - desde.getTime() > 365 * DIA_MS) {
+      return fallo("RANGO_INVALIDO", "El rango no puede superar 365 días", 400);
+    }
+    const comercio = parsed.data.comercio ?? null;
+    const filtro = { desde, hasta, comercio };
+
     const filas = await prisma.pedido.findMany({
+      where: {
+        creadoEn: { gte: desde, lte: hasta },
+        ...(comercio ? { franja: { comercio: { slug: comercio } } } : {}),
+      },
       select: {
         id: true,
         condicionExperimental: true,
@@ -79,7 +117,6 @@ export async function GET(req: Request) {
       canalCaptacion: p.canalCaptacion,
     }));
 
-    const url = new URL(req.url);
     if (url.searchParams.get("formato") === "csv") {
       /*
        * Dos conjuntos, no uno.
@@ -90,14 +127,14 @@ export async function GET(req: Request) {
        */
       const conjunto = url.searchParams.get("datos") === "franjas" ? "franjas" : "pedidos";
 
-      const rango = filas.length
-        ? [filas[0]!.creadoEn, filas[filas.length - 1]!.creadoEn]
-        : [new Date(), new Date()];
-
       let contenido: string;
 
       if (conjunto === "franjas") {
         const franjas = await prisma.franja.findMany({
+          where: {
+            inicio: { gte: desde, lte: hasta },
+            ...(comercio ? { comercio: { slug: comercio } } : {}),
+          },
           include: { comercio: { select: { nombre: true, factorSeguridad: true } } },
           orderBy: { inicio: "asc" },
         });
@@ -162,7 +199,7 @@ export async function GET(req: Request) {
       return new Response(contenido, {
         headers: {
           "content-type": "text/csv; charset=utf-8",
-          "content-disposition": `attachment; filename="${nombreArchivo(conjunto, rango[0]!, rango[1]!)}"`,
+          "content-disposition": `attachment; filename="${nombreArchivo(conjunto, desde, hasta)}"`,
         },
       });
     }
@@ -180,27 +217,21 @@ export async function GET(req: Request) {
       select: { canalCaptacion: true, primerPedidoEn: true, creadoEn: true },
     });
 
-    // Los totales los cuenta la base. Traer filas para medir su `.length` es
-    // pagar el transporte de todo el conjunto por un número que Postgres ya
-    // sabe. Acá los datos ya están en memoria por las métricas del piloto, pero
-    // el conteo de estudiantes activados sí se resuelve donde corresponde.
-    const activados = await prisma.usuario.count({
-      where: { rol: "ESTUDIANTE", primerPedidoEn: { not: null } },
-    });
+    // Los totales y las series pesadas las agrega la base (lib/metricas-sql).
+    const [totales, cargaA, cargaB, porDia] = await Promise.all([
+      conteosSql(prisma, filtro),
+      cargaPorHoraSql(prisma, filtro, "A"),
+      cargaPorHoraSql(prisma, filtro, "B"),
+      cumplimientoPorDiaSql(prisma, filtro),
+    ]);
 
     return ok({
       generadoEn: new Date().toISOString(),
-      totales: {
-        usuarios: usuarios.length,
-        pedidos: pedidos.length,
-        activados,
-      },
+      rango: { desde: desde.toISOString(), hasta: hasta.toISOString(), comercio },
+      totales,
       comparacionAB: compararAB(pedidos),
-      cargaPorHora: {
-        a: cargaPorHoraDelDia(pedidos, "A"),
-        b: cargaPorHoraDelDia(pedidos, "B"),
-      },
-      porDia: cumplimientoPorDia(pedidos),
+      cargaPorHora: { a: cargaA, b: cargaB },
+      porDia,
       embudo: embudoPorCanal(usuarios),
       tiempoActivacionMedianaMin: tiempoActivacionMedianaMin(usuarios),
       usabilidad: resumirSus(sus),

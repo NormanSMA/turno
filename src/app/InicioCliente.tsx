@@ -27,7 +27,7 @@ import { BandaPedidoActivo } from "@/components/BandaPedidoActivo";
 import { BannerServicio } from "@/components/BannerServicio";
 import { ComparacionReceso } from "@/components/ComparacionReceso";
 import { TarjetaComida, type ProductoTarjeta } from "@/components/TarjetaComida";
-import { HojaProducto } from "@/components/HojaProducto";
+import { HojaProductoCarga } from "@/components/HojasCarga";
 import { api, cordobas, fechaCorta, horaCorta } from "@/lib/cliente";
 import { useFavoritos } from "@/lib/favoritos";
 import { escalonado } from "@/lib/movimiento";
@@ -455,7 +455,7 @@ export function InicioCliente({
         </footer>
       </main>
 
-      <HojaProducto
+      <HojaProductoCarga
         producto={abierto}
         onCerrar={() => setAbierto(null)}
         favorito={abierto ? marcados.has(abierto.id) : false}

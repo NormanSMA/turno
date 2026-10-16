@@ -79,6 +79,8 @@ const RUTAS: Ruta[] = [
     listo: "main",
   },
   { nombre: "panel", correo: ADMIN, ruta: async () => "/panel", listo: "main" },
+  { nombre: "panel sistema", correo: ADMIN, ruta: async () => "/panel/sistema", listo: "main" },
+  { nombre: "panel simulador", correo: ADMIN, ruta: async () => "/panel/simulador", listo: "input[type=range]" },
 ];
 
 for (const modo of ["reduce", "no-preference"] as const) {

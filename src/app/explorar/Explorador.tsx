@@ -18,7 +18,7 @@ import {
   zonasDisponibles,
 } from "@/core/cercania";
 import { guardarZona, useZona } from "@/lib/zona";
-import { HojaProducto } from "@/components/HojaProducto";
+import { HojaProductoCarga } from "@/components/HojasCarga";
 import {
   TarjetaComida,
   type ProductoTarjeta,
@@ -277,7 +277,7 @@ export function Explorador({
         </ul>
       )}
 
-      <HojaProducto
+      <HojaProductoCarga
         producto={abierto}
         onCerrar={() => setAbierto(null)}
         favorito={abierto ? marcados.has(abierto.id) : false}

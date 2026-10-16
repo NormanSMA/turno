@@ -26,12 +26,12 @@ import { Esqueleto, ErrorVista, Vacio } from "@/components/estados-ui";
 import { RevisarPedido } from "@/components/RevisarPedido";
 import { Icono } from "@/components/iconos";
 import { ComprobanteImpreso } from "@/components/ComprobanteImpreso";
+import type { AlternativaFranja } from "@/components/HojaFranjaAgotada";
 import {
-  HojaFranjaAgotada,
-  type AlternativaFranja,
-} from "@/components/HojaFranjaAgotada";
-import { HojaCambios } from "@/components/HojaCambios";
-import { HojaSesion } from "@/components/HojaSesion";
+  HojaCambiosCarga,
+  HojaFranjaAgotadaCarga,
+  HojaSesionCarga,
+} from "@/components/HojasCarga";
 import {
   AvisoSinConexion,
   useHayRed,
@@ -1097,7 +1097,7 @@ export function ClienteComercio({
           servidor ya venía calculando. */}
       {/* Lo que cambió mientras armaba. Ver `HojaCambios`: el servidor gana,
           pero nunca en silencio. */}
-      <HojaCambios
+      <HojaCambiosCarga
         cambios={cambios}
         onContinuar={() => setCambios([])}
         onCerrar={() => setCambios([])}
@@ -1105,13 +1105,13 @@ export function ClienteComercio({
 
       {/* §40: la sesión venció al confirmar. Qué pasó, qué se conservó, qué
           podés hacer — en ese orden, antes de mandarte a ningún lado. */}
-      <HojaSesion
+      <HojaSesionCarga
         abierta={sesionVencida}
         volverA={`/c/${comercio.slug}`}
         unidades={unidades}
       />
 
-      <HojaFranjaAgotada
+      <HojaFranjaAgotadaCarga
         motivo={rechazo?.motivo ?? null}
         alternativas={rechazo?.alternativas ?? []}
         onElegir={reintentarCon}

@@ -126,3 +126,10 @@ Dependencias: T1 y T2 primero. T3 en paralelo con T2. T5, T7, T8 y T10 después 
 - **`layoutId` de tarjeta a drawer (fase 6):** no se adopta. `domAnimation` no trae las funciones de layout; activarlo exige `domMax` (más JS en toda la app) y la foto del drawer vive en un portal de Vaul con su propia animación. La foto entra con un resorte (escala 1.08 a 1). Reabrir solo si la medición de `domMax` cabe en el presupuesto de la sección 4.
 - **Dock móvil:** la fila de estado del pedido va fuera de la caja del dock (`absolute bottom-full`) y se anima con transform y opacidad. Animar `height` movía el dock y sumaba CLS (~0.006). Medido: CLS entre 0.000 y 0.002 en 5 rutas.
 - **`useSondeo` retirado:** la cocina, la banda, el pedido y Mis pedidos usan TanStack Query con `refetchIntervalInBackground: false`. `src/lib/sondeo.ts` se borró.
+
+## 11. Resultado de la fase 7 y el presupuesto de JS real (2026-10-15)
+- **Recharts y TanStack Table** quedaron solo en `/panel/*`, con `next/dynamic` y esqueleto de la misma altura. `e2e/presupuesto.spec.ts` falla si otra ruta los descarga en la carga inicial.
+- **shadcn `chart.tsx`** escribía un `<style>` sin nonce y el CSP lo bloqueaba: se reemplazó por variables de color en el atributo `style` del contenedor.
+- **Medición (T1)**, KB de JS comprimido de una visita en frío: `/` 239, `/explorar` 239, `/c/[slug]` 248, `/pedido/[id]` 242, cocina 220, informe 235, `/panel` 660 y `/panel/simulador` 230. Cargar las hojas con `next/dynamic` bajó 28 KB por ruta (antes 267 a 277).
+- **La meta de la sección 4 (110 a 140 KB) no se alcanza.** Piso real: React 70 KB y Next 42 KB, más Motion unos 72 KB. Motion es la palanca que queda: un dock con transiciones CSS y Motion solo en la mascota bajaría la portada cerca de 170 KB. No se hizo porque cambia el dock aprobado en la fase 6. Decisión pendiente de Norman.
+- Los techos actuales (línea base más 6 %) los vigila `e2e/presupuesto.spec.ts`.

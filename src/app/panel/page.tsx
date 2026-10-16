@@ -11,8 +11,9 @@ import Link from "next/link";
  * instructivo ("silencio sobre lo que falló").
  */
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Navegacion } from "@/components/Navegacion";
 import { NumeroAnimado } from "@/components/NumeroAnimado";
 import {
@@ -22,6 +23,10 @@ import {
   type PuntoDia,
   type PuntoFranja,
 } from "@/components/graficos";
+import { FiltrosPanel } from "@/components/panel/FiltrosPanel";
+import { TablaComerciosCarga } from "@/components/panel/TablaComerciosCarga";
+import { aQuery, aRango, leerFiltros, type FiltrosPanel as Filtros } from "@/core/panel-filtros";
+import type { PresionComercio } from "@/core/sistema";
 import { api, ErrorApi } from "@/lib/cliente";
 
 interface Resumen {
@@ -75,25 +80,75 @@ const pct = (v: number | null) => (v === null ? "—" : `${(v * 100).toFixed(1)}
 const num = (v: number | null, d = 2) => (v === null ? "—" : v.toFixed(d));
 
 export default function Pagina() {
-  const router = useRouter();
-  const [m, setM] = useState<Metricas | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // useSearchParams exige Suspense para no desactivar el prerender de la ruta.
+  return (
+    <Suspense fallback={<main className="p-8 text-sm text-tinta-suave">Cargando…</main>}>
+      <Panel />
+    </Suspense>
+  );
+}
 
+function Panel() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const filtros = useMemo(() => leerFiltros(params), [params]);
+
+  const cambiar = (f: Filtros) => {
+    const q = aQuery(f);
+    router.replace(q ? `/panel?${q}` : "/panel", { scroll: false });
+  };
+
+  // `ahora` se fija al cambiar el filtro: una clave estable evita pedir en bucle.
+  const rango = useMemo(
+    () => aRango(filtros, new Date()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtros.dias, filtros.comercio],
+  );
+
+  const consulta = useQuery({
+    queryKey: ["panel-metricas", filtros.dias, filtros.comercio, rango.hasta],
+    queryFn: () => {
+      const q = new URLSearchParams(rango);
+      if (filtros.comercio) q.set("comercio", filtros.comercio);
+      return api<Metricas>(`/api/admin/metricas?${q}`);
+    },
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+  const m = consulta.data ?? null;
+
+  // Sin endpoint de listado: salen de operación (nombre y slug) y de presión.
+  const operacion = useQuery({
+    queryKey: ["panel-comercios"],
+    queryFn: () =>
+      api<{ comercios: { nombre: string; slug: string }[] }>("/api/admin/operacion"),
+    staleTime: 5 * 60_000,
+  });
+  const comercios = operacion.data?.comercios ?? [];
+  const nombreComercio =
+    comercios.find((c) => c.slug === filtros.comercio)?.nombre ?? null;
+
+  const sistema = useQuery({
+    queryKey: ["panel-presion", filtros.dias],
+    queryFn: () =>
+      api<{ presion: PresionComercio[] }>(`/api/admin/sistema?dias=${filtros.dias}`),
+    placeholderData: keepPreviousData,
+  });
+  const filasTabla = (sistema.data?.presion ?? []).filter(
+    (p) => !nombreComercio || p.comercio === nombreComercio,
+  );
+
+  const e = consulta.error;
+  const noAutorizado = e instanceof ErrorApi && e.status === 401;
   useEffect(() => {
-    api<Metricas>("/api/admin/metricas")
-      .then(setM)
-      .catch((e) => {
-        if (e instanceof ErrorApi && e.status === 401) {
-          router.replace("/entrar?volver=/panel");
-          return;
-        }
-        setError(
-          e instanceof ErrorApi
-            ? e.message
-            : "No se pudieron cargar las métricas.",
-        );
-      });
-  }, [router]);
+    if (noAutorizado) router.replace("/entrar?volver=/panel");
+  }, [noAutorizado, router]);
+  const error =
+    e && !noAutorizado
+      ? e instanceof ErrorApi
+        ? e.message
+        : "No se pudieron cargar las métricas."
+      : null;
 
   if (error)
     return (
@@ -131,8 +186,17 @@ export default function Pagina() {
           >
             Estado del sistema
           </Link>
+          <Link
+            href="/panel/simulador"
+            className="presiona inline-flex items-center gap-2 rounded-full border border-borde bg-superficie px-4 py-2 text-chico font-semibold"
+          >
+            Simulador
+          </Link>
         </div>
         <h1 className="titulo text-4xl">Indicadores</h1>
+        <div className="mt-4">
+          <FiltrosPanel filtros={filtros} comercios={comercios} onCambio={cambiar} />
+        </div>
         <p className="mt-2 text-sm text-tinta-suave">
           {m.totales.pedidos} pedidos · {m.totales.usuarios} usuarios ·{" "}
           {m.totales.activados} activados
@@ -289,6 +353,21 @@ export default function Pagina() {
             <EmbudoCanales canales={m.embudo} />
           </div>
         </div>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="etiqueta mb-1">Detalle por comercio</h2>
+        <p className="mb-3 max-w-2xl text-sm text-tinta-suave">
+          Presión de capacidad de cada comercio en el período. Pedidos,
+          cumplimiento y no-shows por comercio no salen de la API de métricas.
+        </p>
+        {filasTabla.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-borde bg-superficie p-5 text-sm text-tinta-suave">
+            No hay franjas en este período.
+          </p>
+        ) : (
+          <TablaComerciosCarga filas={filasTabla} />
+        )}
       </section>
 
       <section className="mb-8">

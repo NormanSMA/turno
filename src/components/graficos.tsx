@@ -1,23 +1,39 @@
 "use client";
 
 /**
- * Gráficos del panel. SVG a mano, sin librería.
+ * Gráficos del panel. Envoltorio: textos, leyendas y cifras se renderizan
+ * aquí; el dibujo (Recharts) se carga de forma diferida desde
+ * graficos-recharts.tsx, con un esqueleto de la misma altura para que el CLS
+ * siga en 0 (ADR-23 §4: recharts nunca en la carga inicial de otras rutas).
  *
- * Paleta categórica verificada (luminosidad, croma, separación CVD, contraste
- * sobre blanco): A = #009ca6, B = #c26208. Peor par adyacente ΔE 17.4 deutan ·
- * 25.0 visión normal · contraste ≥ 3:1.
- *
- * No se usa el rojo de marca: en estas pantallas señala acciones, y una serie
- * pintada de rojo competiría con los botones. Los datos no son acciones.
+ * Paleta por tokens: A = --chart-1, B = --chart-3, fallas = --color-error. No
+ * se usa el rojo de marca: en estas pantallas señala acciones.
  *
  * La identidad nunca queda solo en el color: hay leyenda, etiqueta sobre el
- * pico y una tabla con los mismos números debajo.
+ * pico y los mismos números en texto debajo de cada gráfico.
  */
 
-const A = "var(--color-marca-fondo)";
-const B = "var(--color-fidelidad)";
-const REJILLA = "var(--color-borde)";
-const TINTA_TENUE = "var(--color-texto-2)";
+import dynamic from "next/dynamic";
+
+const A = "var(--chart-1)";
+const B = "var(--chart-3)";
+
+const Esqueleto = ({ className, style }: { className: string; style?: React.CSSProperties }) => (
+  <div aria-hidden className={`${className} w-full rounded-sm bg-papel-medio`} style={style} />
+);
+
+const BarrasCarga = dynamic(
+  () => import("./graficos-recharts").then((m) => m.BarrasCarga),
+  { ssr: false, loading: () => <Esqueleto className="h-24" /> },
+);
+const LineaCumplimiento = dynamic(
+  () => import("./graficos-recharts").then((m) => m.LineaCumplimiento),
+  { ssr: false, loading: () => <Esqueleto className="h-32" /> },
+);
+const BarrasEmbudo = dynamic(
+  () => import("./graficos-recharts").then((m) => m.BarrasEmbudo),
+  { ssr: false, loading: () => <Esqueleto className="h-full" /> },
+);
 
 export interface PuntoFranja {
   hora: string;
@@ -79,17 +95,17 @@ export function CargaPorHora({
       <div className="mt-3 space-y-4">
         <PanelSerie
           nombre="A · elección libre"
-          color={A}
+          serie="a"
           horas={horas}
-          serie={a}
+          datos={a}
           maximo={maximo}
           razon={razonA}
         />
         <PanelSerie
           nombre="B · sugerencia activa"
-          color={B}
+          serie="b"
           horas={horas}
-          serie={b}
+          datos={b}
           maximo={maximo}
           razon={razonB}
         />
@@ -111,59 +127,42 @@ export function CargaPorHora({
 
 function PanelSerie({
   nombre,
-  color,
-  horas,
   serie,
+  horas,
+  datos,
   maximo,
   razon,
 }: {
   nombre: string;
-  color: string;
+  serie: "a" | "b";
   horas: string[];
-  serie: PuntoFranja[];
+  datos: PuntoFranja[];
   maximo: number;
   razon: number;
 }) {
-  const total = serie.reduce((acc, p) => acc + p.cargaMin, 0);
+  const total = datos.reduce((acc, p) => acc + p.cargaMin, 0);
   const minutos = horas.map(
-    (h) => serie.find((p) => p.hora === h)?.cargaMin ?? 0,
+    (h) => datos.find((p) => p.hora === h)?.cargaMin ?? 0,
   );
   const valores = minutos.map((v) => (total === 0 ? 0 : (v / total) * 100));
   const pico = Math.max(...valores, 0);
-  const indicePico = valores.indexOf(pico);
+  const indicePico = pico > 0 ? valores.indexOf(pico) : -1;
+  const color = serie === "a" ? A : B;
 
   // La razón que se muestra es el INDICADOR 3, calculado por franja en el
-  // servidor — no una razón derivada de esta silueta. Son estadísticos
-  // distintos: la silueta agrega por hora del día sobre todos los días y
-  // comercios, y su pico/promedio puede ordenar A y B al revés que el
-  // indicador. Mostrar dos números con el mismo nombre y distinto valor es
-  // exactamente lo que un jurado señala primero.
+  // servidor, no una razón derivada de esta silueta: son estadísticos
+  // distintos y mostrar dos números con el mismo nombre y distinto valor es
+  // lo primero que un jurado señala.
 
-  const alto = 88;
-  const ancho = 100;
-  const paso = ancho / horas.length;
-  // 2px de separación entre barras: el hueco de superficie que pide la guía.
-  const anchoBarra = Math.max(0.8, paso - 0.9);
-
-  /*
-   * El promedio, dibujado.
-   *
-   * El indicador 3 ES una razón pico/promedio, y el promedio no aparecía en
-   * ninguna parte: había que creerle al número. Con la línea, la razón se ve
-   * — cuánto sobresale la barra más alta sobre la referencia.
-   */
+  // El promedio, dibujado: el indicador 3 es una razón pico/promedio.
   const conCarga = valores.filter((v) => v > 0);
   const promedio =
     conCarga.length > 0
-      ? conCarga.reduce((a, b) => a + b, 0) / conCarga.length
+      ? conCarga.reduce((s, v) => s + v, 0) / conCarga.length
       : 0;
-  const idGrad = `carga-${nombre.slice(0, 1)}`;
 
   return (
     <figure>
-      {/* Envuelve en vez de comprimirse: en móvil "A · elección libre" y la
-          cifra no entran en la misma línea, y partir las dos a la mitad se lee
-          peor que ponerlas una debajo de otra. */}
       <figcaption className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2">
         <span className="text-xs font-semibold">{nombre}</span>
         <span className="hora text-xs text-tinta-suave tabular-nums">
@@ -174,74 +173,18 @@ function PanelSerie({
         </span>
       </figcaption>
 
-      <svg
-        viewBox={`0 0 ${ancho} ${alto + 12}`}
-        role="img"
-        aria-label={`Distribución de la carga en la condición ${nombre}. ${pico.toFixed(0)} por ciento cae en la hora pico. Indicador 3: ${razon.toFixed(2)}.`}
-        className="w-full"
-        preserveAspectRatio="none"
-      >
-        <defs>
-          {/* Degradado vertical del mismo tono: da cuerpo a la barra sin
-              introducir un segundo color que habría que interpretar. */}
-          <linearGradient id={idGrad} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="1" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.55" />
-          </linearGradient>
-        </defs>
+      <BarrasCarga
+        serie={serie}
+        nombre={nombre}
+        horas={horas}
+        minutos={minutos}
+        valores={valores}
+        maximo={maximo}
+        promedio={promedio}
+        indicePico={indicePico}
+      />
 
-        {/* Rejilla recesiva: tres líneas, sin números que compitan. */}
-        {[0.25, 0.5, 0.75, 1].map((f) => (
-          <line
-            key={f}
-            x1="0"
-            x2={ancho}
-            y1={alto - alto * f}
-            y2={alto - alto * f}
-            stroke={REJILLA}
-            strokeWidth="0.4"
-          />
-        ))}
-
-        {/* La referencia contra la que se mide el pico. */}
-        {promedio > 0 && (
-          <line
-            x1="0"
-            x2={ancho}
-            y1={alto - (promedio / maximo) * alto}
-            y2={alto - (promedio / maximo) * alto}
-            stroke={TINTA_TENUE}
-            strokeWidth="0.5"
-            strokeDasharray="2 2"
-          />
-        )}
-
-        {valores.map((v, i) => {
-          const h = (v / maximo) * alto;
-          const esPico = i === indicePico && pico > 0;
-          return (
-            <rect
-              key={horas[i]}
-              x={i * paso + (paso - anchoBarra) / 2}
-              y={alto - h}
-              width={anchoBarra}
-              height={h}
-              rx="0.9"
-              fill={`url(#${idGrad})`}
-              // El pico va entero y el resto atenuado: la pregunta del gráfico
-              // es dónde está la punta, no cuánto mide cada hora.
-              opacity={esPico ? 1 : 0.6}
-            >
-              <title>{`${horas[i]} · ${minutos[i]} min de cocina · ${v.toFixed(1)}% de la condición`}</title>
-            </rect>
-          );
-        })}
-
-        <line x1="0" x2={ancho} y1={alto} y2={alto} stroke={REJILLA} strokeWidth="0.6" />
-      </svg>
-
-      {/* Solo las horas de los extremos y la del pico: etiquetar todas las
-          columnas convierte el eje en ruido. */}
+      {/* Solo las horas de los extremos y la del pico. */}
       <div className="hora mt-0.5 flex justify-between text-[0.625rem] text-tinta-suave">
         <span>{horas[0]}</span>
         {indicePico > 0 && indicePico < horas.length - 1 && (
@@ -297,8 +240,6 @@ export function CumplimientoPorDia({ dias }: { dias: PuntoDia[] }) {
     );
   }
 
-  const ancho = 100;
-  const alto = 60;
   const META = 0.9;
 
   /*
@@ -315,102 +256,22 @@ export function CumplimientoPorDia({ dias }: { dias: PuntoDia[] }) {
    */
   const minValor = Math.min(...puntos.map((p) => p.tasaCumplimiento!));
   const piso = Math.min(0.8, Math.floor((minValor - 0.05) * 20) / 20);
-  const x = (i: number) => (i / (puntos.length - 1)) * ancho;
-  const y = (v: number) => alto - ((v - piso) / (1 - piso)) * alto;
-
-  /*
-   * Curva suavizada, no polilínea.
-   *
-   * Lo que se busca acá es la tendencia —si el cumplimiento se sostiene o se
-   * cae—, y el zigzag diario la esconde. Catmull-Rom → Bézier pasa por todos
-   * los puntos, así que ningún día queda desplazado de su valor real.
-   */
-  const pts = puntos.map((p, i) => [x(i), y(p.tasaCumplimiento!)] as const);
-  let linea = `M ${pts[0]![0]} ${pts[0]![1]}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] ?? pts[i]!;
-    const p1 = pts[i]!;
-    const p2 = pts[i + 1]!;
-    const p3 = pts[i + 2] ?? p2;
-    linea += ` C ${p1[0] + (p2[0] - p0[0]) / 6} ${p1[1] + (p2[1] - p0[1]) / 6}, ${
-      p2[0] - (p3[0] - p1[0]) / 6
-    } ${p2[1] - (p3[1] - p1[1]) / 6}, ${p2[0]} ${p2[1]}`;
-  }
-
   const ultimo = puntos.at(-1)!;
   const cumple = (ultimo.tasaCumplimiento ?? 0) >= META;
   const bajoMeta = puntos.filter((p) => p.tasaCumplimiento! < META).length;
 
   return (
     <figure>
-      <svg
-        viewBox={`0 0 ${ancho} ${alto}`}
-        role="img"
-        aria-label={`Cumplimiento diario. Último día: ${((ultimo.tasaCumplimiento ?? 0) * 100).toFixed(0)} por ciento. ${bajoMeta} de ${puntos.length} días por debajo de la meta.`}
-        className="w-full"
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <linearGradient id="cumpl-area" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={A} stopOpacity="0.25" />
-            <stop offset="100%" stopColor={A} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {/* La zona de incumplimiento, sombreada. Un punto que cae ahí se ve
-            antes de leer su número. */}
-        <rect
-          x="0"
-          y={y(META)}
-          width={ancho}
-          height={alto - y(META)}
-          fill="var(--color-error)"
-          opacity="0.06"
-        />
-
-        <line
-          x1="0"
-          x2={ancho}
-          y1={y(META)}
-          y2={y(META)}
-          stroke={TINTA_TENUE}
-          strokeWidth="0.5"
-          strokeDasharray="2 2"
-        />
-
-        <path
-          d={`${linea} L ${ancho} ${alto} L 0 ${alto} Z`}
-          fill="url(#cumpl-area)"
-        />
-        <path
-          d={linea}
-          fill="none"
-          stroke={A}
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-
-        {puntos.map((p, i) => {
-          const esUltimo = i === puntos.length - 1;
-          const falla = p.tasaCumplimiento! < META;
-          return (
-            <circle
-              key={p.dia}
-              cx={x(i)}
-              cy={y(p.tasaCumplimiento!)}
-              // El último va más grande: es el estado de hoy, no un día más.
-              r={esUltimo ? 2.2 : falla ? 1.7 : 1.2}
-              fill={falla ? "var(--color-error)" : A}
-              stroke="var(--color-fondo)"
-              strokeWidth="0.6"
-            >
-              <title>{`${p.dia} · ${(p.tasaCumplimiento! * 100).toFixed(0)}% · ${p.pedidos} pedidos`}</title>
-            </circle>
-          );
-        })}
-      </svg>
+      <LineaCumplimiento
+        puntos={puntos.map((p) => ({
+          dia: p.dia,
+          pedidos: p.pedidos,
+          tasa: p.tasaCumplimiento!,
+        }))}
+        piso={piso}
+        meta={META}
+        resumen={`Cumplimiento diario. Último día: ${((ultimo.tasaCumplimiento ?? 0) * 100).toFixed(0)} por ciento. ${bajoMeta} de ${puntos.length} días por debajo de la meta.`}
+      />
 
       <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
         <span className="hora text-tinta-suave">
@@ -467,7 +328,20 @@ export function EmbudoCanales({
   const global = totalReg > 0 ? totalAct / totalReg : null;
 
   return (
-    <ul className="space-y-3">
+    <div>
+      <div style={{ height: 32 * ordenados.length }}>
+        <BarrasEmbudo
+          canales={ordenados.map((c) => ({
+            canal: c.canal.replace(/_/g, " "),
+            activados: c.activados,
+            resto: Math.max(c.registros - c.activados, 0),
+            total: c.registros,
+          }))}
+          maximo={maximo}
+          altura={32 * ordenados.length}
+        />
+      </div>
+      <ul className="mt-2 space-y-1">
       {ordenados.map((c) => {
         const tasa = c.tasaActivacion ?? 0;
         // Mejor o peor que el promedio del piloto: sin esa referencia, un 32 %
@@ -475,7 +349,7 @@ export function EmbudoCanales({
         const sobreMedia = global !== null && tasa > global;
         return (
           <li key={c.canal}>
-            <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
+            <div className="flex items-baseline justify-between gap-2 text-xs">
               <span className="font-medium">{c.canal.replace(/_/g, " ")}</span>
               <span className="hora tabular-nums text-tinta-suave">
                 {c.activados}/{c.registros}{" "}
@@ -495,35 +369,6 @@ export function EmbudoCanales({
               </span>
             </div>
 
-            <div className="relative h-6 overflow-hidden rounded-sm bg-papel-medio">
-              {/* Los registros: el todo. */}
-              <div
-                className="absolute inset-y-0 left-0 rounded-sm transition-[width] duration-500"
-                style={{
-                  width: `${(c.registros / maximo) * 100}%`,
-                  background: A,
-                  opacity: 0.22,
-                }}
-              />
-              {/* Los que llegaron a pedir: la parte que importa. */}
-              <div
-                className="absolute inset-y-0 left-0 rounded-sm transition-[width] duration-500"
-                style={{
-                  width: `${(c.activados / maximo) * 100}%`,
-                  background: `linear-gradient(90deg, ${A}, color-mix(in oklab, ${A} 78%, black))`,
-                }}
-              />
-              {/* La media del piloto, sobre la barra: convierte cada porcentaje
-                  en "mejor o peor que el resto" sin tener que compararlos de a
-                  pares. */}
-              {global !== null && (
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 w-px bg-tinta/40"
-                  style={{ left: `${global * (c.registros / maximo) * 100}%` }}
-                />
-              )}
-            </div>
           </li>
         );
       })}
@@ -547,11 +392,11 @@ export function EmbudoCanales({
         </span>
         {global !== null && (
           <span className="flex items-center gap-1.5">
-            <span aria-hidden className="h-3 w-px bg-tinta/40" />
             media del piloto: {(global * 100).toFixed(0)}%
           </span>
         )}
       </li>
-    </ul>
+      </ul>
+    </div>
   );
 }

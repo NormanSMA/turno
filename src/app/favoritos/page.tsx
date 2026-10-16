@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Navegacion } from "@/components/Navegacion";
 import { TarjetaComida, type ProductoTarjeta } from "@/components/TarjetaComida";
-import { HojaProducto } from "@/components/HojaProducto";
+import { HojaProductoCarga } from "@/components/HojasCarga";
 import { Icono } from "@/components/iconos";
 import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { api, ErrorApi } from "@/lib/cliente";
@@ -138,7 +138,7 @@ export default function Pagina() {
         )}
       </main>
 
-      <HojaProducto
+      <HojaProductoCarga
         producto={abierto}
         onCerrar={() => setAbierto(null)}
         favorito={abierto ? marcados.has(abierto.id) : false}

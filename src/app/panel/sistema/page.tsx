@@ -30,6 +30,7 @@ import {
   tonoPorUmbral,
 } from "@/components/panel-ui";
 import { api, ErrorApi } from "@/lib/cliente";
+import type { ResumenCanal } from "@/core/outbox-resumen";
 import type { Desvio, Embudo, PresionComercio } from "@/core/sistema";
 
 interface Datos {
@@ -45,6 +46,7 @@ interface Datos {
     franjas: number;
     pedidos: number;
   };
+  bandeja: Record<"CORREO" | "PUSH", ResumenCanal>;
   presion: PresionComercio[];
   embudo: Embudo;
   calibracion: {
@@ -194,6 +196,21 @@ export default function Pagina() {
                     nota={`${d.salud.pedidos} pedidos en el período`}
                   />
                 </div>
+              </div>
+            </Seccion>
+
+            <Seccion
+              titulo="Cola de avisos"
+              nota="Bandeja de salida de correo y push. Solo números: no se muestran destinatarios ni contenido."
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(["CORREO", "PUSH"] as const).map((canal) => (
+                  <TarjetaCanal
+                    key={canal}
+                    nombre={canal === "CORREO" ? "Correo" : "Push"}
+                    r={d.bandeja[canal]}
+                  />
+                ))}
               </div>
             </Seccion>
 
@@ -379,6 +396,51 @@ function Seccion({
       <p className="mb-3 max-w-2xl text-chico text-texto-2">{nota}</p>
       {children}
     </section>
+  );
+}
+
+function TarjetaCanal({ nombre, r }: { nombre: string; r: ResumenCanal }) {
+  // Mismo umbral que los incidentes: más de 20 pendientes es cola atrasada.
+  const conFallos = r.fallidas > 0 || r.atascadas > 0;
+  const atrasada = r.pendientes > 20;
+  const estado = conFallos ? "Con fallos" : atrasada ? "Atrasada" : "Al día";
+  const tono = conFallos ? "malo" : atrasada ? "aviso" : "bueno";
+
+  const filas: [string, string][] = [
+    ["Pendientes", String(r.pendientes)],
+    [
+      "Pendiente más viejo",
+      r.masAntiguaPendienteMin === null
+        ? "ninguno"
+        : `${r.masAntiguaPendienteMin} min`,
+    ],
+    ["Enviando", String(r.enviando)],
+    ["Atascadas", String(r.atascadas)],
+    ["Fallidas", String(r.fallidas)],
+    ["Intentos máximos", String(r.intentosMax)],
+    ["Enviadas en 24 h", String(r.enviadasUltimas24h)],
+  ];
+
+  return (
+    <div className="space-y-2">
+      <TarjetaDato
+        titulo={nombre}
+        valor={estado}
+        tono={tono}
+        nota={r.ultimoError ? `Último error: ${r.ultimoError}` : "sin errores"}
+      />
+      <dl className="divide-y divide-borde overflow-hidden rounded-lg border border-borde bg-superficie">
+        {filas.map(([k, v]) => (
+          <div
+            key={k}
+            className="flex items-baseline justify-between gap-3 px-4 py-2 text-chico"
+          >
+            <dt className="text-texto-2">{k}</dt>
+            <dd className="hora font-semibold tabular-nums">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 

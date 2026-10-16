@@ -28,7 +28,7 @@ import { AvisoSinConexion } from "@/components/AvisoSinConexion";
 import { AvisoUrgencia } from "@/components/AvisoUrgencia";
 import { PedidoRecogido } from "@/components/PedidoRecogido";
 import { PedidoCerrado } from "@/components/PedidoCerrado";
-import { HojaAyuda } from "@/components/HojaAyuda";
+import { HojaAyudaCarga } from "@/components/HojasCarga";
 import { Icono } from "@/components/iconos";
 
 interface Detalle {
@@ -341,7 +341,7 @@ export default function Pagina({
       </main>
 
       {p && (
-        <HojaAyuda
+        <HojaAyudaCarga
           abierta={ayuda}
           onCerrar={() => setAyuda(false)}
           estado={p.estado}

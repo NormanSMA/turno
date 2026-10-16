@@ -147,7 +147,13 @@ test.describe("panel de administración", () => {
     context,
   }) => {
     await entrar(context, ADMIN);
-    const r = await page.request.get("/api/admin/metricas");
+    // Desde la fase 7 la API mide un rango (30 días por defecto): se pide uno
+    // explícito de 365 días para poder contrastar contra TODA la base.
+    const hasta = new Date();
+    const desde = new Date(hasta.getTime() - 364 * 86_400_000);
+    const r = await page.request.get(
+      `/api/admin/metricas?desde=${desde.toISOString()}&hasta=${hasta.toISOString()}`,
+    );
     expect(r.status()).toBe(200);
 
     const cuerpo = await r.json();
@@ -157,7 +163,29 @@ test.describe("panel de administración", () => {
 
     // Contrastado contra la base: el panel no puede inventar ni perder filas.
     const [{ n }] = await consultar<{ n: string }>(
-      `SELECT count(*)::text AS n FROM pedido`,
+      `SELECT count(*)::text AS n FROM pedido WHERE "creadoEn" >= $1 AND "creadoEn" <= $2`,
+      [desde.toISOString(), hasta.toISOString()],
+    );
+    expect(cuerpo.totales.pedidos).toBe(Number(n));
+  });
+
+  test("sin parámetros la API mide los últimos 30 días y lo dice", async ({
+    page,
+    context,
+  }) => {
+    await entrar(context, ADMIN);
+    const r = await page.request.get("/api/admin/metricas");
+    expect(r.status()).toBe(200);
+    const cuerpo = await r.json();
+
+    const dias =
+      (new Date(cuerpo.rango.hasta).getTime() - new Date(cuerpo.rango.desde).getTime()) /
+      86_400_000;
+    expect(Math.round(dias)).toBe(30);
+
+    const [{ n }] = await consultar<{ n: string }>(
+      `SELECT count(*)::text AS n FROM pedido WHERE "creadoEn" >= $1 AND "creadoEn" <= $2`,
+      [cuerpo.rango.desde, cuerpo.rango.hasta],
     );
     expect(cuerpo.totales.pedidos).toBe(Number(n));
   });

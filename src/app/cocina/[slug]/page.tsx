@@ -22,7 +22,7 @@ import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { prioridadCocina } from "@/core/urgencia";
 import { proximoCuello } from "@/core/cuello";
 import { Icono } from "@/components/iconos";
-import { HojaProblemaCocina } from "@/components/HojaProblemaCocina";
+import { HojaProblemaCocinaCarga } from "@/components/HojasCarga";
 import { useAhora } from "@/lib/reloj";
 import {
   despertarAudio,
@@ -289,7 +289,7 @@ export default function Pagina({
 
       {/* §32: la salida cuando la cocina no puede cumplir. Se monta una sola
           vez para todo el tablero; la tarjeta solo dice cuál pedido. */}
-      <HojaProblemaCocina
+      <HojaProblemaCocinaCarga
         pedido={problema}
         onCerrar={() => setProblema(null)}
         onConfirmar={cancelarConMotivo}
