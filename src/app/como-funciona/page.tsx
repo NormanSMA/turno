@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Navegacion } from "@/components/Navegacion";
 import { ComparacionReceso } from "@/components/ComparacionReceso";
+import { SimuladorSimple } from "@/components/SimuladorSimple";
 import { CabeceraTurno } from "@/components/marca";
 import { Icono } from "@/components/iconos";
 
@@ -91,7 +92,9 @@ export default function Pagina() {
         id="contenido"
         className="mx-auto w-full max-w-3xl px-4 pb-28 pt-8 sm:px-5 sm:pb-16"
       >
-        <section>
+        <SimuladorSimple />
+
+        <section className="mt-12">
           <h2 className="etiqueta mb-4">Tres pasos</h2>
           <ol className="grid gap-4 sm:grid-cols-3">
             {PASOS.map((p) => (
