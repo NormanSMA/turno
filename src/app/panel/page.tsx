@@ -433,7 +433,7 @@ function Panel() {
               <span
                 aria-hidden
                 className="h-2.5 w-2.5 rounded-full"
-                style={{ background: "#009ca6" }}
+                style={{ background: "var(--chart-1)" }}
               />
               A · elección libre
             </span>
@@ -441,7 +441,7 @@ function Panel() {
               <span
                 aria-hidden
                 className="h-2.5 w-2.5 rounded-full"
-                style={{ background: "#c26208" }}
+                style={{ background: "var(--chart-3)" }}
               />
               B · sugerencia activa
             </span>
@@ -684,8 +684,8 @@ function BarraAB({
         )}
       </div>
       <div className="space-y-1">
-        {fila("A", a, "#009ca6", gana !== "b")}
-        {fila("B", b, "#c26208", gana !== "a")}
+        {fila("A", a, "var(--chart-1)", gana !== "b")}
+        {fila("B", b, "var(--chart-3)", gana !== "a")}
       </div>
     </li>
   );
