@@ -10,8 +10,14 @@
  *     mandar a preguntar al mostrador es la fila que vino a evitar.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Icono } from "@/components/iconos";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 interface Tema {
   id: string;
@@ -106,15 +112,8 @@ export function HojaAyuda({
   ubicacion: string | null;
   minutosNoShow: number;
 }) {
-  const dialogo = useRef<HTMLDialogElement>(null);
+  const primero = useRef<HTMLButtonElement>(null);
   const [abierto, setAbierto] = useState<string | null>(null);
-
-  useEffect(() => {
-    const d = dialogo.current;
-    if (!d) return;
-    if (abierta && !d.open) d.showModal();
-    if (!abierta && d.open) d.close();
-  }, [abierta]);
 
   const alCerrar = useCallback(() => {
     setAbierto(null);
@@ -124,27 +123,29 @@ export function HojaAyuda({
   const temas = temasPara(datos);
 
   return (
-    <dialog
-      ref={dialogo}
-      onClose={alCerrar}
-      aria-labelledby="ayuda-titulo"
-      className="hoja m-0 mt-auto flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border border-borde bg-superficie p-0 text-texto backdrop:bg-texto/60 sm:mx-auto sm:mb-auto sm:rounded-xl"
+    <Drawer
+      open={abierta}
+      onOpenChange={(a) => {
+        if (!a) alCerrar();
+      }}
     >
+      <DrawerContent
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          primero.current?.focus();
+        }}
+        className="mx-auto w-full max-w-md border-borde bg-superficie text-texto data-[vaul-drawer-direction=bottom]:max-h-[88dvh]"
+      >
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
-        <span
-          aria-hidden
-          className="mx-auto mb-4 block h-1 w-10 rounded-full bg-borde sm:hidden"
-        />
-
-        <h2 id="ayuda-titulo" className="titulo text-h2">
+        <DrawerTitle className="titulo text-h2">
           ¿En qué te ayudamos?
-        </h2>
-        <p className="mt-1 text-cuerpo text-texto-2">
+        </DrawerTitle>
+        <DrawerDescription className="mt-1 text-cuerpo text-texto-2">
           Sobre este pedido, {datos.codigo}.
-        </p>
+        </DrawerDescription>
 
         <ul className="mt-4 space-y-2">
-          {temas.map((t) => {
+          {temas.map((t, n) => {
             const desplegado = abierto === t.id;
             return (
               <li
@@ -152,6 +153,7 @@ export function HojaAyuda({
                 className="overflow-hidden rounded-md border border-borde"
               >
                 <button
+                  ref={n === 0 ? primero : undefined}
                   type="button"
                   aria-expanded={desplegado}
                   onClick={() => setAbierto(desplegado ? null : t.id)}
@@ -190,12 +192,13 @@ export function HojaAyuda({
       <div className="shrink-0 border-t border-borde bg-superficie px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <button
           type="button"
-          onClick={() => dialogo.current?.close()}
+          onClick={alCerrar}
           className="presiona flex min-h-12 w-full items-center justify-center rounded-md border border-borde px-4 text-cuerpo font-semibold"
         >
           Cerrar
         </button>
       </div>
-    </dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

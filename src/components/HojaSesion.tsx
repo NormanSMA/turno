@@ -9,8 +9,14 @@
  * ese orden, antes de mandar a nadie a ningún lado.
  */
 
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 import { Icono } from "@/components/iconos";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 export function HojaSesion({
   abierta,
@@ -23,36 +29,37 @@ export function HojaSesion({
   /** Cuántas unidades quedaron guardadas, para poder nombrarlas. */
   unidades: number;
 }) {
-  const dialogo = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const d = dialogo.current;
-    if (!d) return;
-    if (abierta && !d.open) d.showModal();
-    if (!abierta && d.open) d.close();
-  }, [abierta]);
+  // Sin `onCerrar` externo: cerrar deja la pantalla como estaba, con el carrito
+  // intacto. Se muestra de nuevo si `abierta` cambia.
+  const [descartada, setDescartada] = useState(false);
+  const [ultima, setUltima] = useState(abierta);
+  if (abierta !== ultima) {
+    setUltima(abierta);
+    setDescartada(false);
+  }
 
   return (
-    <dialog
-      ref={dialogo}
-      aria-labelledby="sesion-titulo"
-      /* Sin `onClose` que reabra el menú: cerrar con Escape deja la pantalla
-         como estaba, con el carrito intacto. La sesión sigue vencida, y el
-         botón sigue ahí cuando la persona quiera. */
-      className="hoja m-0 mt-auto w-full max-w-md rounded-t-xl border border-borde bg-superficie p-0 text-texto backdrop:bg-texto/60 sm:mx-auto sm:mb-auto sm:rounded-xl"
+    <Drawer
+      open={abierta && !descartada}
+      onOpenChange={(a) => {
+        if (!a) setDescartada(true);
+      }}
     >
+      <DrawerContent
+        className="mx-auto w-full max-w-md border-borde bg-superficie text-texto data-[vaul-drawer-direction=bottom]:max-h-[88dvh]"
+      >
       <div className="p-6 text-center">
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-superficie-2 text-texto-2">
           <Icono nombre="entrar" size={24} />
         </span>
 
-        <h2 id="sesion-titulo" className="titulo mt-3 text-h2">
+        <DrawerTitle className="titulo mt-3 text-h2">
           Tu sesión terminó
-        </h2>
+        </DrawerTitle>
 
-        <p className="mt-2 text-cuerpo text-texto-2">
+        <DrawerDescription className="mt-2 text-cuerpo text-texto-2">
           Pasó el tiempo de inactividad y tuvimos que cerrarla.
-        </p>
+        </DrawerDescription>
 
         {/* Con el número a la vista: "guardamos tu pedido" es una promesa;
             "tus 3 productos siguen ahí" es verificable. */}
@@ -74,6 +81,7 @@ export function HojaSesion({
           Volvés a esta misma pantalla, con tu pedido armado.
         </p>
       </div>
-    </dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

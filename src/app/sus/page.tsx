@@ -202,7 +202,7 @@ function Marco({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Navegacion />
-      <main className="mx-auto w-full max-w-xl px-4 pb-28 pt-8 sm:px-5 sm:pb-12">
+      <main className="mx-auto w-full max-w-xl px-4 pb-40 pt-8 sm:px-5 sm:pb-12">
         {children}
       </main>
     </>

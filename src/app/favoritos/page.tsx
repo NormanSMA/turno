@@ -65,7 +65,7 @@ export default function Pagina() {
   return (
     <>
       <Navegacion />
-      <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 sm:px-5 sm:pb-12">
+      <main className="mx-auto w-full max-w-5xl px-4 pb-40 pt-6 sm:px-5 sm:pb-12">
         <header className="mb-5">
           <h1 className="titulo text-h1">Favoritos</h1>
           <p className="mt-1 text-chico text-texto-2">

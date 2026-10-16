@@ -80,7 +80,7 @@ esté caído no puede impedir que la cocina marque un pedido como listo.
 
 ### 3. El sondeo se detiene cuando nadie mira
 
-`useSondeo` (`src/lib/sondeo.ts`) para el temporizador cuando la pestaña se
+`useSondeo` (`src/lib/sondeo.ts`, reemplazado por TanStack Query en `src/lib/consultas-pedido.ts`, ADR-23) para el temporizador cuando la pestaña se
 oculta y lo reanuda —con una carga inmediata— cuando vuelve. Esa carga
 inmediata importa: sin ella, quien desbloquea el teléfono vería el estado viejo
 durante hasta diez segundos, justo en el momento en que más le importa.

@@ -673,7 +673,7 @@ export function ClienteComercio({
     <>
       <Navegacion comercioSlug={comercio.slug} />
 
-      <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 sm:px-5 sm:pb-12">
+      <main className="mx-auto w-full max-w-5xl px-4 pb-40 pt-6 sm:px-5 sm:pb-12">
         {/* ============================================== Volver
             En móvil, la flecha; en escritorio, las migas. Nunca las dos: dos
             formas de volver en la misma pantalla es una de más.
@@ -1433,7 +1433,7 @@ function Confirmacion({
   return (
     <>
       <Navegacion comercioSlug={comercio.slug} />
-      <main className="mx-auto w-full max-w-md px-5 pb-28 pt-8 text-center sm:pb-12">
+      <main className="mx-auto w-full max-w-md px-5 pb-40 pt-8 text-center sm:pb-12">
         <ComprobanteImpreso
           codigo={pedido.codigo}
           comercio={comercio.nombre}

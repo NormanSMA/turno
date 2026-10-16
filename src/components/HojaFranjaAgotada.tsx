@@ -20,9 +20,16 @@
  * problema cueste un solo toque.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Icono } from "@/components/iconos";
+import { MascotaTurno } from "@/components/mascota/Turno";
 import { horaCorta } from "@/lib/cliente";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 export interface AlternativaFranja {
   franjaId: string;
@@ -75,7 +82,7 @@ export function HojaFranjaAgotada({
   onElegir: (franjaId: string) => void;
   onCerrar: () => void;
 }) {
-  const dialogo = useRef<HTMLDialogElement>(null);
+  const primero = useRef<HTMLButtonElement>(null);
 
   // Llega con la sugerida ya marcada: salir del problema tiene que costar un
   // toque, no dos.
@@ -93,45 +100,33 @@ export function HojaFranjaAgotada({
     setElegida(preferida);
   }
 
-  useEffect(() => {
-    const d = dialogo.current;
-    if (!d) return;
-    if (motivo && !d.open) d.showModal();
-    if (!motivo && d.open) d.close();
-  }, [motivo]);
-
-  const alCerrar = useCallback(() => onCerrar(), [onCerrar]);
-
-  if (!motivo) {
-    return <dialog ref={dialogo} className="hidden" onClose={alCerrar} />;
-  }
-
-  const texto = MOTIVOS[motivo] ?? GENERICO;
+  const texto = (motivo && MOTIVOS[motivo]) || GENERICO;
   const hayOpciones = alternativas.length > 0;
 
   return (
-    <dialog
-      ref={dialogo}
-      onClose={alCerrar}
-      aria-labelledby="franja-agotada-titulo"
-      className="hoja m-0 mt-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border border-borde bg-superficie p-0 text-texto backdrop:bg-texto/60 sm:mx-auto sm:mb-auto sm:max-h-[88dvh] sm:rounded-xl"
+    <Drawer
+      open={motivo !== null}
+      onOpenChange={(a) => {
+        if (!a) onCerrar();
+      }}
     >
+      <DrawerContent
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          primero.current?.focus();
+        }}
+        className="mx-auto w-full max-w-md border-borde bg-superficie text-texto data-[vaul-drawer-direction=bottom]:max-h-[88dvh]"
+      >
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
-        <span
-          aria-hidden
-          className="mx-auto mb-4 block h-1 w-10 rounded-full bg-borde sm:hidden"
-        />
+        <div className="flex justify-center">
+          <MascotaTurno estado="error" size={96} />
+        </div>
 
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 shrink-0 text-aviso-texto">
-            <Icono nombre="reloj" size={24} />
-          </span>
-          <div className="min-w-0">
-            <h2 id="franja-agotada-titulo" className="titulo text-h2">
-              {texto.titulo}
-            </h2>
-            <p className="mt-1 text-cuerpo text-texto-2">{texto.porque}</p>
-          </div>
+        <div className="mt-2 min-w-0">
+          <DrawerTitle className="titulo text-h2">{texto.titulo}</DrawerTitle>
+          <DrawerDescription className="mt-1 text-cuerpo text-texto-2">
+            {texto.porque}
+          </DrawerDescription>
         </div>
 
         {/* Lo primero que hay que decir, antes que las opciones: no perdiste
@@ -151,11 +146,12 @@ export function HojaFranjaAgotada({
               aria-label="Horas disponibles"
               className="mt-2 space-y-2"
             >
-              {alternativas.map((a) => {
+              {alternativas.map((a, n) => {
                 const activa = elegida === a.franjaId;
                 return (
                   <li key={a.franjaId}>
                     <button
+                      ref={n === 0 ? primero : undefined}
                       type="button"
                       role="radio"
                       aria-checked={activa}
@@ -205,7 +201,7 @@ export function HojaFranjaAgotada({
             </ul>
           </>
         ) : (
-          <p className="mt-5 rounded-md bg-atencion-suave px-3.5 py-3 text-chico">
+          <p className="mt-5 rounded-md bg-superficie-2 px-3.5 py-3 text-chico">
             No quedan horas para este pedido hoy. Podés quitar algo para que
             ocupe menos cocina, o probar en otro comercio.
           </p>
@@ -229,12 +225,13 @@ export function HojaFranjaAgotada({
         )}
         <button
           type="button"
-          onClick={() => dialogo.current?.close()}
+          onClick={onCerrar}
           className="presiona mt-2 min-h-11 w-full rounded-md px-4 text-chico font-semibold text-texto-2"
         >
           Volver al pedido
         </button>
       </div>
-    </dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

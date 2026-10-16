@@ -91,7 +91,7 @@ export default function Pagina() {
 
       <main
         id="contenido"
-        className="mx-auto w-full max-w-3xl px-4 pb-28 pt-8 sm:px-5 sm:pb-16"
+        className="mx-auto w-full max-w-3xl px-4 pb-40 pt-8 sm:px-5 sm:pb-16"
       >
         <HistoriaReceso />
         <div className="mt-12">

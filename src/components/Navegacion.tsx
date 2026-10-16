@@ -25,6 +25,11 @@ import { LogotipoTurno } from "@/components/marca";
 import { Icono, type NombreIcono } from "@/components/iconos";
 import { sesionCliente } from "@/lib/sesion-cliente";
 import { api } from "@/lib/cliente";
+import { AnimatePresence, m } from "motion/react";
+import { EstadoPedidoDock } from "@/components/BandaPedidoActivo";
+import { usePedidosEnCurso } from "@/lib/consultas-pedido-activo";
+
+const RESORTE = { type: "spring", stiffness: 420, damping: 34 } as const;
 
 interface Sesion {
   autenticado: boolean;
@@ -75,47 +80,6 @@ function useSinLeer(activo: boolean): number {
   return n;
 }
 
-/**
- * Cuántos pedidos tengo en curso.
- *
- * El mismo contador que el de avisos, sobre "Pedidos": si hay algo cocinándose
- * la barra tiene que decirlo sin que haya que entrar a mirar. Es la regla de
- * los tres segundos aplicada a la navegación.
- *
- * Se recarga al volver a la pestaña, no en un intervalo: el número cambia
- * cuando la cocina avanza el pedido, y para eso ya está el sondeo de la
- * pantalla del pedido y el push. Un temporizador acá sería gasto de cómputo
- * repetido en todas las pantallas (ADR-14).
- */
-function useEnCurso(activo: boolean): number {
-  const [n, setN] = useState(0);
-
-  const cargar = useCallback(() => {
-    if (!activo) return;
-    api<{ pedidos: { estado: string }[] }>("/api/pedidos")
-      .then((r) =>
-        setN(
-          r.pedidos.filter(
-            (p) => !["RETIRADO", "NO_SHOW", "CANCELADO"].includes(p.estado),
-          ).length,
-        ),
-      )
-      // Sin sesión responde 401 y no hay contador que mostrar.
-      .catch(() => undefined);
-  }, [activo]);
-
-  useEffect(() => {
-    cargar();
-    const alVolver = () => {
-      if (document.visibilityState === "visible") cargar();
-    };
-    document.addEventListener("visibilitychange", alVolver);
-    return () => document.removeEventListener("visibilitychange", alVolver);
-  }, [cargar]);
-
-  return n;
-}
-
 function Punto({ n, etiqueta }: { n: number; etiqueta: string }) {
   if (n <= 0) return null;
   return (
@@ -151,7 +115,9 @@ export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
   const miComercio = sesion?.usuario?.comercioSlug ?? comercioSlug;
   const dentro = sesion?.autenticado === true;
   const sinLeer = useSinLeer(dentro);
-  const enCurso = useEnCurso(dentro);
+  const pedidos = usePedidosEnCurso();
+  const enCurso = dentro ? pedidos.length : 0;
+  const pedidoDock = dentro ? pedidos[0] : undefined;
 
   const destinos: Destino[] = [
     { href: "/", texto: "Inicio", icono: "inicio" },
@@ -314,16 +280,36 @@ export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
           quitarlo de todos dejaría una fila de iconos sin ancla. Mostrarlo solo
           en el activo resuelve las dos cosas: cabe, y el estado se lee de un
           vistazo. */}
-      <nav
-        aria-label="Principal"
-        className="fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden"
-      >
+      <div className="fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden">
+        {/* Un solo dock carbón. La fila de estado del pedido aparece ENCIMA del
+            dock, fuera de su caja (`absolute bottom-full`) y se anima solo con
+            transform y opacidad: ningún cuadro cambia el layout, así que el CLS
+            sigue en 0. Animar `height` movía el dock cuadro a cuadro y sumaba
+            ~0.006. El enlace de estado queda FUERA del `<nav>`: la navegación
+            móvil y la de escritorio tienen que listar los mismos destinos. */}
+        <div className="relative mx-auto w-full min-w-0 max-w-md">
+          <AnimatePresence initial={false}>
+            {pedidoDock && (
+              <m.div
+                key="estado"
+                initial={{ y: 16, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 16, opacity: 0 }}
+                transition={RESORTE}
+                className="absolute inset-x-0 bottom-full mb-2 overflow-hidden rounded-3xl border border-cocina-borde bg-cocina p-1.5 shadow-md"
+              >
+                <EstadoPedidoDock pedido={pedidoDock} />
+              </m.div>
+            )}
+          </AnimatePresence>
+          <div className="overflow-hidden rounded-3xl border border-cocina-borde bg-cocina p-1.5 shadow-md">
+          <nav aria-label="Principal">
         {/* `min-w-0` en la fila y en cada destino: sin eso los cinco elementos
             suman su ancho natural y a 320 px la barra mide 355, lo que hace
             que TODA la página se mueva de lado. Lo encontró la matriz
             responsive de la auditoría (punto 19). Con `flex-1 basis-0` cada
             destino cede espacio en vez de empujar. */}
-        <ul className="mx-auto flex w-full min-w-0 max-w-md items-center gap-1 rounded-full border border-borde bg-superficie/95 p-1.5 shadow-md backdrop-blur">
+        <ul className="flex w-full min-w-0 items-center gap-1">
           {destinos.slice(0, 5).map((d) => {
             const aqui = activo(d.href);
             return (
@@ -337,7 +323,7 @@ export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
                   /* min-h-11 es la zona táctil de 44 px del §14. Un destino de
                      navegación más chico se falla al caminar. */
                   className={`toque flex min-h-11 items-center justify-center gap-1.5 overflow-hidden rounded-full px-2 text-chico font-semibold transition-colors sm:px-3 ${
-                    aqui ? "bg-marca-fondo text-white" : "text-texto-2"
+                    aqui ? "bg-marca-fondo text-white" : "text-cocina-tinta/70"
                   }`}
                 >
                   <span className="relative">
@@ -356,7 +342,10 @@ export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
             );
           })}
         </ul>
-      </nav>
+          </nav>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

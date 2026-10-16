@@ -11,7 +11,7 @@ import { Esqueleto } from "@/components/estados-ui";
 export default function Cargando() {
   return (
     <main
-      className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 sm:px-5"
+      className="mx-auto w-full max-w-5xl px-4 pb-40 pt-6 sm:px-5"
       aria-busy="true"
       aria-label="Cargando el catálogo"
     >

@@ -81,7 +81,7 @@ export function Explorador({
   return (
     <main
       id="contenido"
-      className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 sm:px-5 sm:pb-12"
+      className="mx-auto w-full max-w-5xl px-4 pb-40 pt-6 sm:px-5 sm:pb-12"
     >
       <h1 className="titulo mb-4 text-h1">¿Qué querés comer?</h1>
 

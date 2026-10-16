@@ -8,60 +8,46 @@
  * cocinándose no abrió TURNO para mirar el catálogo — abrió para saber si ya
  * puede ir.
  *
- * Sin pedidos en curso no dibuja nada. Un hueco vacío con el texto "no tenés
- * pedidos" arriba del menú sería ruido permanente para la mayoría de las
- * visitas.
+ * En móvil lo muestra el dock de la navegación (`EstadoPedidoDock`), así que la
+ * banda solo se dibuja desde `sm`. Sin pedidos en curso no dibuja nada.
  */
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PedidoActivo, type PedidoEnCurso } from "@/components/PedidoActivo";
-import { siHaySesion } from "@/lib/sesion-cliente";
-import { api } from "@/lib/cliente";
-import { useSondeo } from "@/lib/sondeo";
+import { horaCorta } from "@/lib/cliente";
+import { usePedidosEnCurso } from "@/lib/consultas-pedido-activo";
 
-const TERMINALES = ["RETIRADO", "NO_SHOW", "CANCELADO"];
+const ESTADO_CORTO: Record<string, string> = {
+  RECIBIDO: "Confirmado",
+  EN_PREPARACION: "Cocinando",
+  LISTO: "Ya podés pasar",
+};
+
+/** Fila de estado del dock móvil: código, estado y hora del primer pedido. */
+export function EstadoPedidoDock({ pedido }: { pedido: PedidoEnCurso }) {
+  return (
+    <Link
+      href={`/pedido/${pedido.id}`}
+      className="toque flex min-h-11 items-center gap-3 rounded-full px-4 text-chico text-cocina-tinta"
+    >
+      <span className="hora text-cuerpo font-bold tracking-wider">
+        {pedido.codigo}
+      </span>
+      <span className="min-w-0 flex-1 truncate font-semibold">
+        {ESTADO_CORTO[pedido.estado] ?? ESTADO_CORTO.RECIBIDO}
+      </span>
+      <span className="hora shrink-0">{horaCorta(pedido.franjaInicio)}</span>
+    </Link>
+  );
+}
 
 export function BandaPedidoActivo() {
-  const [pedidos, setPedidos] = useState<PedidoEnCurso[] | null>(null);
-  const [hayQueMirar, setHayQueMirar] = useState(false);
+  const pedidos = usePedidosEnCurso();
 
-  useEffect(() => {
-    let vigente = true;
-    siHaySesion(() =>
-      api<{ pedidos: (PedidoEnCurso & { estado: string })[] }>("/api/pedidos"),
-    )
-      .then((r) => {
-        if (!vigente || !r) return;
-        const vivos = r.pedidos.filter((p) => !TERMINALES.includes(p.estado));
-        setPedidos(vivos);
-        setHayQueMirar(vivos.length > 0);
-      })
-      // Sin sesión ni siquiera se pide: el invitado vino a mirar el menú y
-      // este viaje se sabía perdido de antemano (punto 25).
-      .catch(() => undefined);
-    return () => {
-      vigente = false;
-    };
-  }, []);
-
-  // El sondeo arranca SOLO si hay algo vivo que seguir, y se detiene con la
-  // pestaña oculta (ADR-14). En la portada de un invitado no corre nunca.
-  useSondeo(
-    () => {
-      if (!hayQueMirar) return;
-      api<{ pedidos: (PedidoEnCurso & { estado: string })[] }>("/api/pedidos")
-        .then((r) =>
-          setPedidos(r.pedidos.filter((p) => !TERMINALES.includes(p.estado))),
-        )
-        .catch(() => undefined);
-    },
-    hayQueMirar ? 20000 : 3_600_000,
-  );
-
-  if (!pedidos || pedidos.length === 0) return null;
+  if (pedidos.length === 0) return null;
 
   return (
-    <section className="mb-8">
+    <section className="mb-8 hidden sm:block">
       <h2 className="etiqueta mb-2">
         {pedidos.length === 1 ? "Tu pedido" : "Tus pedidos"}
       </h2>

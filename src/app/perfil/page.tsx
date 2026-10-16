@@ -83,7 +83,7 @@ export default function Pagina() {
       <Navegacion />
       <main
         id="contenido"
-        className="mx-auto w-full max-w-2xl px-4 pb-28 pt-6 sm:px-5 sm:pb-12"
+        className="mx-auto w-full max-w-2xl px-4 pb-40 pt-6 sm:px-5 sm:pb-12"
       >
         {error && <ErrorVista texto={error} onReintentar={cargar} />}
 

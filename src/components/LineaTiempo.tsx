@@ -16,6 +16,45 @@
 
 import { useEffect, useState } from "react";
 import { fechaCorta, horaCorta } from "@/lib/cliente";
+import type { EstadoPedido } from "@/core/estados";
+import { personajeParaEstado } from "@/core/estado-personaje";
+import { MascotaTurno } from "@/components/mascota/Turno";
+
+const ESTADOS: readonly string[] = [
+  "RECIBIDO",
+  "EN_PREPARACION",
+  "LISTO",
+  "RETIRADO",
+  "NO_SHOW",
+  "CANCELADO",
+];
+
+/**
+ * Personaje del paso actual. El contenedor reserva el alto de la mascota
+ * (112 x 131, reservado 132) para que su animación de entrada no mueva el diseño (CLS 0).
+ */
+function Acompanante({ estado }: { estado: string }) {
+  if (!ESTADOS.includes(estado)) return null;
+  const p = personajeParaEstado(estado as EstadoPedido);
+  return (
+    <div className="flex shrink-0 flex-col items-center sm:order-2 sm:w-32">
+      <div className="h-33 w-28">
+        <MascotaTurno
+          key={`${p.mascota}-${p.conGorro}`}
+          estado={p.mascota}
+          conGorro={p.conGorro}
+          size={112}
+        />
+      </div>
+      <p
+        aria-live="polite"
+        className="mt-1 min-h-10 text-center text-sm text-tinta-suave"
+      >
+        {p.frase}
+      </p>
+    </div>
+  );
+}
 
 export interface EventoUI {
   estado: string;
@@ -136,21 +175,26 @@ export function LineaTiempo({
       )}
 
       {cancelado && (
-        <div className="rounded-xl border border-brasa bg-brasa-claro p-4">
-          <p className="font-semibold">
-            {estado === "CANCELADO" ? "Pedido cancelado" : "No retirado"}
-          </p>
-          <p className="mt-1 text-sm text-tinta-suave">
-            {estado === "CANCELADO"
-              ? "La hora que tenías reservada volvió a quedar disponible."
-              : "El pedido estuvo listo pero nadie pasó a retirarlo."}
-          </p>
+        <div className="flex flex-col gap-3 rounded-xl border border-brasa bg-brasa-claro p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold">
+              {estado === "CANCELADO" ? "Pedido cancelado" : "No retirado"}
+            </p>
+            <p className="mt-1 text-sm text-tinta-suave">
+              {estado === "CANCELADO"
+                ? "La hora que tenías reservada volvió a quedar disponible."
+                : "El pedido estuvo listo pero nadie pasó a retirarlo."}
+            </p>
+          </div>
+          <Acompanante estado={estado} />
         </div>
       )}
 
       {/* Los cuatro pasos, con la marca real de cada evento. */}
       {!cancelado && (
-        <ol className="mt-5 space-y-0">
+        <div className="mt-5 flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <Acompanante estado={estado} />
+        <ol className="w-full space-y-0 sm:w-auto sm:flex-1">
           {PASOS.map((p, i) => {
             const hecho = alcanzado(i);
             const actual = i === indiceActual;
@@ -216,6 +260,7 @@ export function LineaTiempo({
             );
           })}
         </ol>
+        </div>
       )}
     </div>
   );

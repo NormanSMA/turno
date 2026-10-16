@@ -18,10 +18,16 @@
  * desapareció pasa desapercibido.
  */
 
-import { useCallback, useEffect, useRef } from "react";
+import { useRef } from "react";
 import { Icono, type NombreIcono } from "@/components/iconos";
 import { cordobas } from "@/lib/cliente";
 import type { Cambio } from "@/core/revalidar";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 const FORMA: Record<
   Cambio["tipo"],
@@ -43,13 +49,13 @@ const FORMA: Record<
     titulo: "Ya no se puede reservar",
     detalle: "Sigue habiendo, pero ahora solo se pide en el mostrador.",
     icono: "reloj",
-    color: "text-aviso-texto",
+    color: "text-texto-2",
   },
   PRECIO: {
     titulo: "Cambió de precio",
     detalle: "",
     icono: "repetir",
-    color: "text-aviso-texto",
+    color: "text-texto-2",
   },
 };
 
@@ -63,21 +69,8 @@ export function HojaCambios({
   onContinuar: () => void;
   onCerrar: () => void;
 }) {
-  const dialogo = useRef<HTMLDialogElement>(null);
+  const continuar = useRef<HTMLButtonElement>(null);
   const abierta = cambios.length > 0;
-
-  useEffect(() => {
-    const d = dialogo.current;
-    if (!d) return;
-    if (abierta && !d.open) d.showModal();
-    if (!abierta && d.open) d.close();
-  }, [abierta]);
-
-  const alCerrar = useCallback(() => onCerrar(), [onCerrar]);
-
-  if (!abierta) {
-    return <dialog ref={dialogo} className="hidden" onClose={alCerrar} />;
-  }
 
   // Primero lo que salió del carrito: es la noticia, el precio es el detalle.
   const ordenados = [...cambios].sort(
@@ -87,26 +80,28 @@ export function HojaCambios({
   const quedaAlgo = cambios.some((c) => !c.bloqueante) || fuera < cambios.length;
 
   return (
-    <dialog
-      ref={dialogo}
-      onClose={alCerrar}
-      aria-labelledby="cambios-titulo"
-      className="hoja m-0 mt-auto flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border border-borde bg-superficie p-0 text-texto backdrop:bg-texto/60 sm:mx-auto sm:mb-auto sm:max-h-[88dvh] sm:rounded-xl"
+    <Drawer
+      open={abierta}
+      onOpenChange={(a) => {
+        if (!a) onCerrar();
+      }}
     >
+      <DrawerContent
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          continuar.current?.focus();
+        }}
+        className="mx-auto w-full max-w-md border-borde bg-superficie text-texto data-[vaul-drawer-direction=bottom]:max-h-[88dvh]"
+      >
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
-        <span
-          aria-hidden
-          className="mx-auto mb-4 block h-1 w-10 rounded-full bg-borde sm:hidden"
-        />
-
-        <h2 id="cambios-titulo" className="titulo text-h2">
+        <DrawerTitle className="titulo text-h2">
           Tu pedido cambió
-        </h2>
-        <p className="mt-1 text-cuerpo text-texto-2">
+        </DrawerTitle>
+        <DrawerDescription className="mt-1 text-cuerpo text-texto-2">
           {fuera > 0
             ? "El comercio movió algo mientras armabas. Te lo mostramos antes de confirmar."
             : "Hubo un cambio de precio desde que lo agregaste."}
-        </p>
+        </DrawerDescription>
 
         <ul className="mt-5 space-y-2">
           {ordenados.map((c) => {
@@ -169,6 +164,7 @@ export function HojaCambios({
 
       <div className="shrink-0 border-t border-borde bg-superficie px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <button
+          ref={continuar}
           type="button"
           onClick={onContinuar}
           className="presiona flex min-h-12 w-full items-center justify-center rounded-md bg-marca-fondo px-4 text-cuerpo font-semibold text-white"
@@ -176,6 +172,7 @@ export function HojaCambios({
           {quedaAlgo ? "Revisar mi pedido" : "Entendido"}
         </button>
       </div>
-    </dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

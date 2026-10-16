@@ -239,7 +239,7 @@ function Centro({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Navegacion />
-      <main className="mx-auto flex min-h-[80dvh] w-full max-w-md flex-col justify-center px-5 pb-28 pt-10 sm:pb-10">
+      <main className="mx-auto flex min-h-[80dvh] w-full max-w-md flex-col justify-center px-5 pb-40 pt-10 sm:pb-10">
         {children}
       </main>
     </>

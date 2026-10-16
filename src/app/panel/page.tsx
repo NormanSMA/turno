@@ -109,7 +109,7 @@ export default function Pagina() {
   return (
     <>
     <Navegacion />
-    <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-8 sm:px-5 sm:pb-12">
+    <main className="mx-auto w-full max-w-5xl px-4 pb-40 pt-8 sm:px-5 sm:pb-12">
       <header className="mb-8">
         <p className="etiqueta">Piloto TURNO</p>
         <div className="mt-3 flex flex-wrap gap-2">

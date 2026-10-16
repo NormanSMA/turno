@@ -6,7 +6,7 @@
  * datos que necesita en el mostrador.
  */
 
-import { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Navegacion } from "@/components/Navegacion";
@@ -18,8 +18,8 @@ import {
 } from "@/components/estados-ui";
 import { PedidoActivo } from "@/components/PedidoActivo";
 import { Icono } from "@/components/iconos";
-import { api, cordobas, ErrorApi, horaCorta } from "@/lib/cliente";
-import { useSondeo } from "@/lib/sondeo";
+import { cordobas, ErrorApi, horaCorta } from "@/lib/cliente";
+import { useMisPedidos } from "@/lib/consultas-pedido";
 import { agruparPorDia, resumirHistorial } from "@/core/historial";
 import { useAhora } from "@/lib/reloj";
 
@@ -47,24 +47,21 @@ const TERMINALES = ["RETIRADO", "NO_SHOW", "CANCELADO"];
 
 export default function Pagina() {
   const router = useRouter();
-  const [pedidos, setPedidos] = useState<PedidoUI[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const cargar = useCallback(() => {
-    api<{ pedidos: PedidoUI[] }>("/api/pedidos")
-      .then((r) => setPedidos(r.pedidos))
-      .catch((e) => {
-        if (e instanceof ErrorApi && e.status === 401) {
-          router.replace("/entrar?volver=/mis-pedidos");
-          return;
-        }
-        setError("No pudimos cargar tus pedidos. Revisá tu conexión.");
-      });
-  }, [router]);
-
-  // Sondeo suave y solo con la pestaña a la vista (ADR-14): el estado lo
+  // Consulta cada 15 s solo con la pestaña a la vista (ADR-14): el estado lo
   // cambia la cocina, y con el teléfono guardado avisa Web Push.
-  useSondeo(cargar, 15000);
+  const consulta = useMisPedidos<PedidoUI>();
+  const pedidos = consulta.data ?? null;
+  const sinSesion =
+    consulta.error instanceof ErrorApi && consulta.error.status === 401;
+  const error =
+    consulta.error && !sinSesion
+      ? "No pudimos cargar tus pedidos. Revisá tu conexión."
+      : null;
+  const cargar = () => void consulta.refetch();
+
+  useEffect(() => {
+    if (sinSesion) router.replace("/entrar?volver=/mis-pedidos");
+  }, [sinSesion, router]);
 
   // Dos listas, no una: un pedido en curso y uno de la semana pasada no se
   // miran por la misma razón ni con la misma urgencia.
@@ -93,7 +90,7 @@ export default function Pagina() {
   return (
     <>
     <Navegacion />
-    <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-6 sm:px-5 sm:pb-12">
+    <main className="mx-auto w-full max-w-3xl px-4 pb-40 pt-6 sm:px-5 sm:pb-12">
       <header className="mb-6">
         <h1 className="titulo text-h1">Mis pedidos</h1>
       </header>

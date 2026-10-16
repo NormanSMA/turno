@@ -105,7 +105,7 @@ export default function Pagina() {
   return (
     <>
       <Navegacion />
-      <main className="mx-auto w-full max-w-lg px-4 pb-28 pt-6 sm:px-5 sm:pb-12">
+      <main className="mx-auto w-full max-w-lg px-4 pb-40 pt-6 sm:px-5 sm:pb-12">
         <Link
           href="/avisos"
           className="etiqueta inline-flex items-center gap-1 hover:text-texto"

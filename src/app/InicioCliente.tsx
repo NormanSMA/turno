@@ -172,7 +172,7 @@ export function InicioCliente({
 
       <main
         id="contenido"
-        className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 sm:px-5 sm:pb-16"
+        className="mx-auto w-full max-w-5xl px-4 pb-40 pt-6 sm:px-5 sm:pb-16"
       >
         {/* §37: si el servicio tiene un problema, se dice antes que nada.
             Esconderlo solo consigue que alguien camine hasta un mostrador que

@@ -7,22 +7,21 @@
  * que lo primero es el código de retiro y la hora; el detalle de items va al
  * final.
  *
- * Sondea cada 10 s **solo mientras la pestaña está visible** (ADR-14). Cuando
+ * Consulta (TanStack Query) cada 10 s **solo mientras la pestaña está visible** (ADR-14). Cuando
  * el teléfono se guarda en el bolsillo, el que avisa es Web Push, no esta
  * pantalla: sondear para repintar algo que nadie mira era el grueso del gasto
  * de cómputo del plan gratuito.
  */
 
-import { use, useCallback, useRef, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LineaTiempo, type EventoUI } from "@/components/LineaTiempo";
 import { MicroEncuesta } from "@/components/MicroEncuesta";
 import { Navegacion } from "@/components/Navegacion";
 import { ErrorVista, Esqueleto } from "@/components/estados-ui";
-import { apiConFrescura, api, cordobas, ErrorApi } from "@/lib/cliente";
-import { avisarListo } from "@/lib/aviso";
-import { useSondeo } from "@/lib/sondeo";
+import { api, cordobas, ErrorApi } from "@/lib/cliente";
+import { usePedido } from "@/lib/consultas-pedido";
 import { AvisosPush } from "@/components/AvisosPush";
 import { CodigoRetiro } from "@/components/CodigoRetiro";
 import { AvisoSinConexion } from "@/components/AvisoSinConexion";
@@ -61,50 +60,30 @@ export default function Pagina({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const [p, setP] = useState<Detalle | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [cancelando, setCancelando] = useState(false);
-  const [desdeCache, setDesdeCache] = useState(false);
+  const [errorAccion, setErrorAccion] = useState<string | null>(null);
 
-  // El estado anterior vive en una ref y no en estado: dispara un efecto
-  // secundario (el aviso), no un repintado. En estado provocaría un render de
-  // más en cada sondeo, diez veces por minuto.
-  const estadoPrevio = useRef<string | null>(null);
+  // El aviso a LISTO y el estado anterior viven en la consulta.
+  const consulta = usePedido<Detalle>(id);
+  const p = consulta.data?.datos ?? null;
+  const desdeCache = consulta.data?.desdeCache ?? false;
+  const sinSesion =
+    consulta.error instanceof ErrorApi && consulta.error.status === 401;
+  const errorCarga =
+    consulta.error && !sinSesion
+      ? consulta.error instanceof ErrorApi
+        ? consulta.error.message
+        : "No pudimos cargar el pedido. Revisá tu conexión."
+      : null;
+  const error = errorAccion ?? errorCarga;
+  const cargar = () => {
+    setErrorAccion(null);
+    void consulta.refetch();
+  };
 
-  const cargar = useCallback(() => {
-    apiConFrescura<Detalle>(`/api/pedidos/${id}`)
-      .then(({ datos, desdeCache: viejo }) => {
-        setDesdeCache(viejo);
-
-        // El aviso se dispara en la TRANSICIÓN a LISTO, no cada vez que se ve
-        // el estado LISTO. Si no, cada sondeo volvería a avisar lo mismo.
-        // Tampoco se avisa desde una copia sin conexión: eso no es noticia
-        // nueva, es lo último que se supo.
-        if (
-          !viejo &&
-          estadoPrevio.current !== null &&
-          estadoPrevio.current !== "LISTO" &&
-          datos.estado === "LISTO"
-        ) {
-          avisarListo(datos.codigo, datos.comercio);
-        }
-        estadoPrevio.current = datos.estado;
-        setP(datos);
-      })
-      .catch((e) => {
-        if (e instanceof ErrorApi && e.status === 401) {
-          router.replace(`/entrar?volver=/pedido/${id}`);
-          return;
-        }
-        setError(
-          e instanceof ErrorApi
-            ? e.message
-            : "No pudimos cargar el pedido. Revisá tu conexión.",
-        );
-      });
-  }, [id, router]);
-
-  useSondeo(cargar, 10000);
+  useEffect(() => {
+    if (sinSesion) router.replace(`/entrar?volver=/pedido/${id}`);
+  }, [sinSesion, router, id]);
 
   async function cancelar() {
     setCancelando(true);
@@ -115,7 +94,7 @@ export default function Pagina({
       });
       cargar();
     } catch (e) {
-      setError(
+      setErrorAccion(
         e instanceof ErrorApi ? e.message : "No pudimos cancelar el pedido.",
       );
     } finally {
@@ -135,7 +114,7 @@ export default function Pagina({
   return (
     <>
       <Navegacion />
-      <main className="mx-auto w-full max-w-lg px-4 pb-28 pt-6 sm:px-5 sm:pb-12">
+      <main className="mx-auto w-full max-w-lg px-4 pb-40 pt-6 sm:px-5 sm:pb-12">
         <Link
           href="/mis-pedidos"
           className="etiqueta inline-flex items-center gap-1 hover:text-tinta"
