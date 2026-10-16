@@ -16,7 +16,9 @@
  */
 
 /*
- * Seis tonos con el mismo contraste entre sí, y ninguno es el rojo de marca:
+ * Seis tonos de la familia Gourmet Minimal (ADR-22: pizarra, dorado, ciruela,
+ * terracota, oliva y arena oscura) con el mismo contraste entre sí, y ninguno es
+ * el rojo ni el ámbar de urgencia:
  * el código identifica un pedido, no señala una acción. Si el código usara el
  * color de marca competiría con los botones primarios de la misma pantalla.
  *
@@ -26,12 +28,12 @@
  * y el color ES parte del identificador.
  */
 const TONOS = [
-  { fondo: "#e0edfb", texto: "#14406e", borde: "#2f7fc9" },
-  { fondo: "#fdf0dc", texto: "#7a4a06", borde: "#d98a1b" },
-  { fondo: "#e6e6f9", texto: "#332d80", borde: "#5a52c4" },
-  { fondo: "#fae4f0", texto: "#77245c", borde: "#bb4a94" },
-  { fondo: "#dff0e6", texto: "#12503a", borde: "#258a4b" },
-  { fondo: "#f6e9df", texto: "#6b3a1c", borde: "#a86a3d" },
+  { fondo: "#e1e8ec", texto: "#26414f", borde: "#4d7388" },
+  { fondo: "#f4ead9", texto: "#6b4a14", borde: "#b68d59" },
+  { fondo: "#ece1e6", texto: "#5a2e48", borde: "#8c5470" },
+  { fondo: "#f6e4da", texto: "#7a3a1c", borde: "#b8623a" },
+  { fondo: "#e3e8df", texto: "#2c4234", borde: "#5f7d63" },
+  { fondo: "#ebe4d6", texto: "#4a4030", borde: "#8a7a5a" },
 ] as const;
 
 function huella(texto: string): number {

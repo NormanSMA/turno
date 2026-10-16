@@ -1,3 +1,4 @@
+import { ConsultasProveedor } from "@/components/ConsultasProveedor";
 import { MovimientoProveedor } from "@/components/MovimientoProveedor";
 import { Toaster } from "@/components/ui/sonner";
 import type { Metadata, Viewport } from "next";
@@ -78,7 +79,9 @@ export default function RootLayout({
           Saltar al contenido
         </a>
         <Arranque />
-        <MovimientoProveedor>{children}</MovimientoProveedor>
+        <ConsultasProveedor>
+          <MovimientoProveedor>{children}</MovimientoProveedor>
+        </ConsultasProveedor>
         <Toaster />
       </body>
     </html>

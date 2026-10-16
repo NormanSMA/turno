@@ -122,3 +122,4 @@ Dependencias: T1 y T2 primero. T3 en paralelo con T2. T5, T7, T8 y T10 después 
 - **Prueba de CSP:** `e2e/csp.spec.ts` cubre 8 rutas por 2 modos de movimiento y un control negativo. El control usa `connect-src` y `style-src-elem`, no un script externo: con `strict-dynamic` el navegador no bloquea un script inyectado desde la consola.
 - **shadcn:** estilo `radix-vega` (el estilo `new-york` ya no existe). Las variables de shadcn apuntan a los tokens de TURNO en `globals.css`; no tienen valores propios.
 - **Pendiente de la sección 4:** línea base de KB por ruta (T1).
+- **Vaul:** inyecta un `<style>` sin nonce igual que Sonner. Se parcheó (`patches/vaul.patch`) y sus estilos se extrajeron a `src/components/ui/vaul.css`, importado desde `drawer.tsx`. Al actualizar Vaul: reaplicar el parche, volver a extraer el CSS y correr `e2e/csp.spec.ts` (la ruta de cocina monta un Drawer y lo detecta).

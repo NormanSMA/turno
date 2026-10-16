@@ -10,8 +10,14 @@
  * franja. La confirmación es explícita: le arruina el almuerzo a alguien.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Icono } from "@/components/iconos";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 const MOTIVOS = [
   {
@@ -47,16 +53,9 @@ export function HojaProblemaCocina({
   onCerrar: () => void;
   onConfirmar: (pedidoId: string, nota: string) => Promise<void>;
 }) {
-  const dialogo = useRef<HTMLDialogElement>(null);
+  const primero = useRef<HTMLButtonElement>(null);
   const [motivo, setMotivo] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
-
-  useEffect(() => {
-    const d = dialogo.current;
-    if (!d) return;
-    if (pedido && !d.open) d.showModal();
-    if (!pedido && d.open) d.close();
-  }, [pedido]);
 
   const alCerrar = useCallback(() => {
     setMotivo(null);
@@ -69,34 +68,44 @@ export function HojaProblemaCocina({
     setEnviando(true);
     try {
       await onConfirmar(pedido.id, elegido?.nota ?? "Otro motivo operativo");
-      dialogo.current?.close();
+      alCerrar();
     } finally {
       setEnviando(false);
     }
   }
 
   return (
-    <dialog
-      ref={dialogo}
-      onClose={alCerrar}
-      aria-labelledby="problema-titulo"
-      className="hoja m-0 mt-auto flex max-h-[88dvh] w-full max-w-md flex-col overflow-hidden rounded-t-xl border border-borde bg-papel-alto p-0 text-tinta backdrop:bg-black/70 sm:mx-auto sm:mb-auto sm:rounded-xl"
+    <Drawer
+      open={pedido !== null}
+      dismissible={!enviando}
+      onOpenChange={(abierto) => {
+        if (!abierto && !enviando) alCerrar();
+      }}
     >
+      <DrawerContent
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          primero.current?.focus();
+        }}
+        className="mx-auto w-full max-w-md border-borde bg-papel-alto text-tinta data-[vaul-drawer-direction=bottom]:max-h-[88dvh]"
+      >
       <div className="min-h-0 flex-1 overflow-y-auto p-5">
-        <h2 id="problema-titulo" className="titulo text-xl">
+        <DrawerTitle className="titulo text-xl text-tinta">
           No podemos preparar este pedido
-        </h2>
-        <p className="mt-1 text-sm text-tinta-suave">
+        </DrawerTitle>
+        <DrawerDescription className="mt-1 text-sm text-tinta-suave">
           {pedido?.codigo} se va a cancelar y su capacidad vuelve a quedar libre.
           Al estudiante le avisamos con el motivo.
-        </p>
+        </DrawerDescription>
 
         <ul className="mt-4 space-y-2">
-          {MOTIVOS.map((m) => (
+          {MOTIVOS.map((m, n) => (
             <li key={m.id}>
               <button
+                ref={n === 0 ? primero : undefined}
                 type="button"
                 role="radio"
+                disabled={enviando}
                 aria-checked={motivo === m.id}
                 onClick={() => setMotivo(m.id)}
                 className={`presiona flex min-h-12 w-full items-center gap-3 rounded-md border px-4 text-left text-sm font-medium ${
@@ -134,12 +143,14 @@ export function HojaProblemaCocina({
         </button>
         <button
           type="button"
-          onClick={() => dialogo.current?.close()}
-          className="presiona flex min-h-12 w-full items-center justify-center rounded-md border border-borde px-4 text-sm font-semibold"
+          disabled={enviando}
+          onClick={alCerrar}
+          className="presiona flex min-h-12 w-full items-center justify-center rounded-md border border-borde px-4 text-sm font-semibold disabled:opacity-40"
         >
           Volver al tablero
         </button>
       </div>
-    </dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

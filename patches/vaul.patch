@@ -1,0 +1,26 @@
+diff --git a/dist/index.js b/dist/index.js
+index 7f343be1fafe1cf302ee6afc7268c29490895e34..749742ae289e9e8e9dd5d61fe24c73fb00c1a858 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1,6 +1,7 @@
+ 'use client';
+ function __insertCSS(code) {
+-  if (!code || typeof document == 'undefined') return
++  // TURNO (ADR-23): sin <style> inyectado, el CSP lo bloquea. Los estilos van en src/components/ui/vaul.css.
++  return
+   let head = document.head || document.getElementsByTagName('head')[0]
+   let style = document.createElement('style')
+   style.type = 'text/css'
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 0dbbce5526681925a81804ced237a045a53c0355..25d7ef4513cbc94495ecb353cbf537fa480c35df 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1,6 +1,7 @@
+ 'use client';
+ function __insertCSS(code) {
+-  if (!code || typeof document == 'undefined') return
++  // TURNO (ADR-23): sin <style> inyectado, el CSP lo bloquea. Los estilos van en src/components/ui/vaul.css.
++  return
+   let head = document.head || document.getElementsByTagName('head')[0]
+   let style = document.createElement('style')
+   style.type = 'text/css'

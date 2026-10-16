@@ -16,7 +16,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Icono } from "@/components/iconos";
 import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { NumeroAnimado } from "@/components/NumeroAnimado";
+import { MascotaTurno } from "@/components/mascota/Turno";
 import { api, cordobas, ErrorApi } from "@/lib/cliente";
+import { narrarInforme, type Narrativa } from "@/core/informe-narrativa";
 import type {
   Cifras,
   Ocupacion,
@@ -111,6 +113,16 @@ export function Informe({ slug }: { slug: string }) {
 
         {d && (
           <>
+            <Historia
+              narrativa={narrarInforme({
+                cifras: d.cifras,
+                ventasPorHora: d.porHora,
+                ocupacion: d.ocupacion,
+                periodoEtiqueta:
+                  d.dias === 1 ? "Hoy" : `En los últimos ${d.dias} días`,
+              })}
+            />
+
             {/* ------------------------------------------------ La plata */}
             <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Cifra
@@ -281,6 +293,27 @@ export function Informe({ slug }: { slug: string }) {
           </>
         )}
     </div>
+  );
+}
+
+function Historia({ narrativa }: { narrativa: Narrativa }) {
+  return (
+    <section className="mb-6 flex items-center justify-between gap-6 rounded-lg border border-borde bg-superficie p-5">
+      <div>
+        <h2 className="text-h2 font-bold text-texto">{narrativa.titular}</h2>
+        <ul className="mt-3 space-y-1 text-chico text-texto-2">
+          {narrativa.frases.map((f) => (
+            <li key={f}>{f}</li>
+          ))}
+        </ul>
+      </div>
+      <div className="hidden shrink-0 sm:block">
+        <MascotaTurno
+          estado={narrativa.tono === "atencion" ? "espera" : "listo"}
+          size={96}
+        />
+      </div>
+    </section>
   );
 }
 

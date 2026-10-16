@@ -52,6 +52,21 @@ export async function POST(req: Request) {
       canalCaptacion: datos.canalCaptacion,
     });
 
+    if (!r.admitido && r.motivo === "LIMITE_NO_SHOWS") {
+      const puedePedirEn = r.detalle ?? "";
+      const fecha = new Intl.DateTimeFormat("es", {
+        day: "numeric",
+        month: "long",
+        timeZone: "America/Managua",
+      }).format(new Date(puedePedirEn));
+      return fallo(
+        "LIMITE_NO_SHOWS",
+        `Tuviste varios pedidos sin retirar este mes. Podés volver a pedir el ${fecha}.`,
+        403,
+        { puedePedirEn },
+      );
+    }
+
     if (!r.admitido) {
       // 409, no 400: la solicitud es válida, el sistema no puede cumplirla
       // ahora. Y se devuelven alternativas — el sistema propone, no rechaza.

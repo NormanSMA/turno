@@ -28,6 +28,7 @@ import {
 } from "./admision";
 import { ALFABETO_CODIGO, LARGO_CODIGO } from "./codigo-retiro";
 import { ESTADOS_ACTIVOS } from "./estados";
+import { evaluarPenalizacion, VENTANA_NO_SHOW_DIAS } from "./penalizacion";
 
 export interface SolicitudPedido {
   usuarioId: string;
@@ -48,6 +49,7 @@ export type MotivoNoAdmitido =
   | "FUERA_DE_CUTOFF"
   | "COMERCIO_NO_DISPONIBLE"
   | "LIMITE_PEDIDOS_ACTIVOS"
+  | "LIMITE_NO_SHOWS"
   | "IDEMPOTENCIA_AJENA"
   | "IDEMPOTENCIA_EN_CONFLICTO";
 
@@ -339,6 +341,32 @@ async function ejecutarAdmision(
        * `inicio` dentro de las franjas.
        */
       await tx.$queryRaw`SELECT id FROM usuario WHERE id = ${solicitud.usuarioId}::uuid FOR UPDATE`;
+
+      // Penalización por no-shows. Va bajo el candado del usuario: dos pedidos
+      // simultáneos no pueden esquivarla.
+      const ahoraPenal = ahoraInyectado ?? new Date();
+      const noShows = await tx.eventoPedido.findMany({
+        where: {
+          estado: "NO_SHOW",
+          pedido: { usuarioId: solicitud.usuarioId },
+          timestamp: {
+            gt: new Date(ahoraPenal.getTime() - VENTANA_NO_SHOW_DIAS * 86_400_000),
+          },
+        },
+        select: { timestamp: true },
+      });
+      const penal = evaluarPenalizacion(
+        noShows.map((e) => e.timestamp),
+        ahoraPenal,
+      );
+      if (penal.bloqueado) {
+        return {
+          admitido: false as const,
+          motivo: "LIMITE_NO_SHOWS" as const,
+          detalle: penal.puedePedirEn.toISOString(),
+          alternativas: [],
+        };
+      }
 
       const activos = await tx.pedido.count({
         where: {

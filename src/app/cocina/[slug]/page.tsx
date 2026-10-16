@@ -8,12 +8,11 @@
  *  2. **Los códigos parecidos se confunden.** `XLZ-Y4B` y `YLZ-Y4B` se leen
  *     igual con prisa, así que cada uno lleva color propio (`CodigoPedido`).
  *
- * ADR-05: sondeo cada 5 s. Una petición idempotente que se reintenta sola
+ * ADR-05 y ADR-23: sondeo cada 5 s con TanStack Query. Una petición idempotente que se reintenta sola
  * aguanta el WiFi del campus mejor que una conexión persistente.
  */
 
-import { use, useCallback, useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CodigoPedido } from "@/components/CodigoPedido";
@@ -34,35 +33,8 @@ import {
 } from "@/lib/sonido";
 import { IconoEstado, type EstadoPedido } from "@/components/IconoEstado";
 import { CabeceraOperacion } from "@/components/CabeceraOperacion";
-import { api, ErrorApi, fechaCorta, horaCorta } from "@/lib/cliente";
-import { conTransicionDeVista } from "@/lib/movimiento";
-
-interface PedidoCocina {
-  id: string;
-  codigo: string;
-  estado: "RECIBIDO" | "EN_PREPARACION" | "LISTO";
-  cargaEstimadaMin: number;
-  franjaInicio: string;
-  franjaFin: string;
-  minutosRestantes: number;
-  items: { nombre: string; cantidad: number; tiempoPreparacionMin: number }[];
-}
-
-interface FranjaCocina {
-  id: string;
-  inicio: string;
-  fin: string;
-  capacidadEfectivaMin: number;
-  cargaAsignada: number;
-  ocupacion: number;
-}
-
-interface Tablero {
-  generadoEn: string;
-  comercio: { nombre: string; estadoOperacion: string };
-  pedidos: PedidoCocina[];
-  franjas: FranjaCocina[];
-}
+import { fechaCorta, horaCorta } from "@/lib/cliente";
+import { useTableroCocina, type PedidoCocina, type FranjaCocina } from "@/lib/consultas-cocina";
 
 const COLUMNAS = [
   {
@@ -99,10 +71,8 @@ export default function Pagina({
 }) {
   const { slug } = use(params);
   const router = useRouter();
-  const [tablero, setTablero] = useState<Tablero | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [desconectado, setDesconectado] = useState(false);
-  const [ocupado, setOcupado] = useState<string | null>(null);
+  const { tablero, error, desconectado, sinSesion, ocupado, cambiarEstado } =
+    useTableroCocina(slug);
   // Un solo reloj para todo el tablero: si cada tarjeta llevara el suyo, dos
   // pedidos podrían mostrar urgencias calculadas con segundos distintos.
   const ahora = useAhora(15_000);
@@ -120,83 +90,33 @@ export default function Pagina({
    */
   const vistos = useRef<Set<string> | null>(null);
 
-  const cargar = useCallback(() => {
-    api<Tablero>(`/api/cocina/${slug}`)
-      .then((t) => {
-        /*
-         * Sonar solo por pedidos NUEVOS.
-         *
-         * La primera carga no suena aunque haya doce en cola: el operador
-         * acaba de abrir el tablero y ya los está viendo. Un sonido ahí sería
-         * ruido por algo que no cambió.
-         */
-        const ahoraIds = new Set(t.pedidos.map((p) => p.id));
-        if (vistos.current === null) {
-          vistos.current = ahoraIds;
-        } else {
-          const hayNuevo = t.pedidos.some(
-            (p) => p.estado === "RECIBIDO" && !vistos.current!.has(p.id),
-          );
-          vistos.current = ahoraIds;
-          if (hayNuevo) {
-            sonarPedidoNuevo();
-            vibrarPedidoNuevo();
-          }
-        }
-
-        setTablero(t);
-        setDesconectado(false);
-        setError(null);
-      })
-      .catch((e) => {
-        if (e instanceof ErrorApi && e.status === 401) {
-          router.replace(`/acceso?volver=/cocina/${slug}`);
-          return;
-        }
-        if (e instanceof ErrorApi && e.status === 403) {
-          setError(
-            "Esta cuenta no opera este comercio. Entrá con la cuenta del comercio.",
-          );
-          return;
-        }
-        /*
-         * Un comercio que no existe no es un problema de red.
-         *
-         * Caía en el mismo saco que la desconexión, así que la pantalla decía
-         * "sin conexión · mostrando la última cola conocida" sobre un tablero
-         * vacío: el operador se queda esperando a que vuelva la señal por algo
-         * que no va a arreglarse solo. Pasa al abrir un enlace guardado de un
-         * comercio que se renombró o se dio de baja.
-         */
-        if (e instanceof ErrorApi && e.status === 404) {
-          setError(
-            `No existe ningún comercio con la dirección "${slug}". ` +
-              "Revisá el enlace: puede que lo hayan renombrado.",
-          );
-          return;
-        }
-
-        /*
-         * Solo se declara desconexión cuando el servidor NO respondió.
-         *
-         * Si contestó con un error, hay conexión: decir lo contrario manda al
-         * operador a revisar el wifi por un fallo que está del otro lado. Con
-         * respuesta de error se conserva igual la última cola —el tablero no
-         * puede quedarse en blanco en medio del servicio— pero el aviso dice
-         * que no se pudo actualizar, que es lo que de verdad pasó.
-         */
-        setDesconectado(true);
-        if (e instanceof ErrorApi) {
-          setError("No se pudo actualizar la cola. Reintentando…");
-        }
-      });
-  }, [slug, router]);
+  useEffect(() => {
+    if (sinSesion) router.replace(`/acceso?volver=/cocina/${slug}`);
+  }, [sinSesion, router, slug]);
 
   useEffect(() => {
-    cargar();
-    const t = setInterval(cargar, 5000);
-    return () => clearInterval(t);
-  }, [cargar]);
+    if (!tablero) return;
+    /*
+     * Sonar solo por pedidos NUEVOS.
+     *
+     * La primera carga no suena aunque haya doce en cola: el operador
+     * acaba de abrir el tablero y ya los está viendo. Un sonido ahí sería
+     * ruido por algo que no cambió.
+     */
+    const ahoraIds = new Set(tablero.pedidos.map((p) => p.id));
+    if (vistos.current === null) {
+      vistos.current = ahoraIds;
+      return;
+    }
+    const hayNuevo = tablero.pedidos.some(
+      (p) => p.estado === "RECIBIDO" && !vistos.current!.has(p.id),
+    );
+    vistos.current = ahoraIds;
+    if (hayNuevo) {
+      sonarPedidoNuevo();
+      vibrarPedidoNuevo();
+    }
+  }, [tablero]);
 
   /**
    * Cancelación operativa con motivo (§32).
@@ -206,54 +126,19 @@ export default function Pagina({
    * agrega la nota. No hay un camino especial para cancelar desde la cocina.
    */
   async function cancelarConMotivo(pedidoId: string, nota: string) {
-    setOcupado(pedidoId);
     try {
-      await api(`/api/pedidos/${pedidoId}/estado`, {
-        method: "PATCH",
-        body: JSON.stringify({ estado: "CANCELADO", nota }),
-      });
-      const nuevo = await api<Tablero>(`/api/cocina/${slug}`);
-      conTransicionDeVista(() => {
-        flushSync(() => {
-          setTablero(nuevo);
-          setDesconectado(false);
-        });
-      });
+      await cambiarEstado(pedidoId, "CANCELADO", nota);
       setProblema(null);
-    } catch (e) {
-      setError(e instanceof ErrorApi ? e.message : "No se pudo cancelar.");
-    } finally {
-      setOcupado(null);
+    } catch {
+      // El hook ya revirtió la tarjeta y publicó el mensaje de error.
     }
   }
 
   async function avanzar(p: PedidoCocina, hacia: EstadoPedido) {
-    setOcupado(p.id);
     try {
-      await api(`/api/pedidos/${p.id}/estado`, {
-        method: "PATCH",
-        body: JSON.stringify({ estado: hacia }),
-      });
-
-      // El tablero se pide ANTES de abrir la transición, y recién con la
-      // respuesta en mano se aplica el cambio. Es lo que permite que el
-      // navegador capture un antes y un después consecutivos y anime la
-      // tarjeta viajando de columna en vez de hacerla parpadear.
-      //
-      // `flushSync` es necesario acá y solo acá: `startViewTransition` toma la
-      // foto del "después" apenas retorna su callback, así que el DOM tiene que
-      // estar actualizado de forma síncrona dentro de él.
-      const nuevo = await api<Tablero>(`/api/cocina/${slug}`);
-      conTransicionDeVista(() => {
-        flushSync(() => {
-          setTablero(nuevo);
-          setDesconectado(false);
-        });
-      });
-    } catch (e) {
-      setError(e instanceof ErrorApi ? e.message : "No se pudo actualizar.");
-    } finally {
-      setOcupado(null);
+      await cambiarEstado(p.id, hacia);
+    } catch {
+      // El hook ya revirtió la tarjeta y publicó el mensaje de error.
     }
   }
 
