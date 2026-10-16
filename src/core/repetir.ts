@@ -17,6 +17,8 @@
  * todavía es barata.
  */
 
+import { admite, type FranjaVeredicto } from "./cabe";
+
 export interface ItemAnterior {
   productoId: string;
   nombre: string;
@@ -64,4 +66,45 @@ export function rearmarCarrito(
   }
 
   return { carrito, omitidos };
+}
+
+/**
+ * La franja de un pedido anterior, si todavía sirve hoy.
+ *
+ * Se compara la hora local de inicio (`horaLocal`, la misma que muestra la
+ * pantalla) y no el id: las franjas de ayer no existen hoy. Si esa hora no está
+ * o ya no admite el carrito, devuelve `null` y quien llama cae a la primera
+ * libre.
+ */
+export function franjaHabitual<T extends FranjaVeredicto>(
+  inicioAnterior: string,
+  opciones: readonly T[],
+  cargaMin: number,
+  ahora: Date,
+  horaLocal: (iso: string) => string,
+): T | null {
+  const hora = horaLocal(inicioAnterior);
+  return (
+    opciones.find(
+      (o) => horaLocal(o.inicio) === hora && admite(o, cargaMin, ahora),
+    ) ?? null
+  );
+}
+
+/**
+ * La franja que se preselecciona: la habitual del pedido repetido si todavía
+ * admite el carrito; si no, la sugerida del servidor; si no hay, `null`.
+ */
+export function franjaPreseleccionada<T extends FranjaVeredicto>(
+  inicioAnterior: string | null,
+  sugeridaId: string | null,
+  opciones: readonly T[],
+  cargaMin: number,
+  ahora: Date,
+  horaLocal: (iso: string) => string,
+): string | null {
+  const habitual = inicioAnterior
+    ? franjaHabitual(inicioAnterior, opciones, cargaMin, ahora, horaLocal)
+    : null;
+  return habitual?.franjaId ?? sugeridaId;
 }

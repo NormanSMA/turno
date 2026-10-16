@@ -7,6 +7,7 @@ import {
   esElegible,
   holgura,
   relacionPicoPromedio,
+  tiempoElegible,
   validarPedido,
   type FranjaCapacidad,
   type LineaPedido,
@@ -75,8 +76,21 @@ describe("criterio de elegibilidad t(p) >= t_min (§6.3)", () => {
     expect(esElegible(producto("pizza", 10), params)).toBe(true);
   });
 
-  it("rechaza un producto de preparación casi nula", () => {
-    expect(esElegible(producto("chicle", 0), params)).toBe(false);
+  it("rechaza un producto de preparación casi nula (0 < t < t_min)", () => {
+    expect(esElegible(producto("chicle", 1), params)).toBe(false);
+    expect(esElegible(producto("galleta", 2), params)).toBe(false);
+  });
+
+  it("acepta un producto sin cocina (t = 0): no consume capacidad (ADR-25)", () => {
+    expect(esElegible(producto("agua", 0), params)).toBe(true);
+    expect(tiempoElegible(0, 3)).toBe(true);
+    expect(tiempoElegible(1, 3)).toBe(false);
+    expect(tiempoElegible(3, 3)).toBe(true);
+  });
+
+  it("t = 0 sigue exigiendo anticipable y disponible", () => {
+    expect(esElegible(producto("agua", 0, { anticipable: false }), params)).toBe(false);
+    expect(esElegible(producto("agua", 0, { disponible: false }), params)).toBe(false);
   });
 
   it("rechaza aunque supere t_min si el comercio no lo marcó anticipable", () => {
@@ -93,6 +107,35 @@ describe("criterio de elegibilidad t(p) >= t_min (§6.3)", () => {
 
   it("acepta exactamente en el umbral (borde inclusivo)", () => {
     expect(esElegible(producto("jugo", 3), params)).toBe(true);
+  });
+});
+
+describe("pedidos sin minutos-cocina (Grab and Go)", () => {
+  const agua = { producto: producto("agua", 0), cantidad: 3 };
+  const pizza = { producto: producto("pizza", 10), cantidad: 1 };
+
+  it("un pedido solo de t = 0 es válido y su carga es 0", () => {
+    expect(validarPedido([agua], params)).toEqual({ valido: true, carga: 0 });
+  });
+
+  it("en un pedido mixto la carga sale solo de lo que se cocina", () => {
+    expect(validarPedido([agua, pizza], params)).toEqual({ valido: true, carga: 10 });
+  });
+
+  it("cabe con la franja exactamente al tope", () => {
+    expect(cabeEnFranja(franja("f", 0, 100, 85), 0, 0.85)).toBe(true);
+  });
+
+  it("no cabe si la franja ya quedó por encima del techo (invariante α·C)", () => {
+    expect(cabeEnFranja(franja("f", 0, 40, 85), 0, 0.85)).toBe(false);
+  });
+
+  it("no cabe en una franja cerrada", () => {
+    expect(cabeEnFranja(franja("f", 0, 100, 0, false), 0, 0.85)).toBe(false);
+  });
+
+  it("un pedido con carga 1 sigue sin caber en la franja al tope", () => {
+    expect(cabeEnFranja(franja("f", 0, 100, 85), 1, 0.85)).toBe(false);
   });
 });
 

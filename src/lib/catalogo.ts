@@ -15,6 +15,8 @@ import {
   type FranjaCapacidad,
   type LineaPedido,
 } from "@/core/admision";
+import { ESTADOS_ACTIVOS } from "@/core/estados";
+import { evaluarPenalizacion, VENTANA_NO_SHOW_DIAS } from "@/core/penalizacion";
 
 export async function menuDe(slug: string) {
   const comercio = await prisma.comercio.findUnique({
@@ -61,7 +63,42 @@ export interface ConsultaFranjas {
   slug: string;
   items: { productoId: string; cantidad: number }[];
   condicion: CondicionExperimental;
+  /** Sesión del llamador. Solo un ESTUDIANTE recibe `limites`. */
+  sesion?: { usuarioId: string; rol: string } | null;
   ahora?: Date;
+}
+
+/**
+ * Límites de pedido del estudiante, para avisarle antes de confirmar. Son las
+ * mismas dos consultas que hace `reservar`, que sigue siendo la autoridad.
+ */
+async function limitesDe(
+  usuarioId: string,
+  maximo: number,
+  ahora: Date,
+): Promise<{ activos: number; maximo: number; bloqueadoHasta: string | null }> {
+  const [activos, noShows] = await Promise.all([
+    prisma.pedido.count({
+      where: { usuarioId, estado: { in: ESTADOS_ACTIVOS as unknown as never[] } },
+    }),
+    prisma.eventoPedido.findMany({
+      where: {
+        estado: "NO_SHOW",
+        pedido: { usuarioId },
+        timestamp: { gt: new Date(ahora.getTime() - VENTANA_NO_SHOW_DIAS * 86_400_000) },
+      },
+      select: { timestamp: true },
+    }),
+  ]);
+  const penal = evaluarPenalizacion(
+    noShows.map((e) => e.timestamp),
+    ahora,
+  );
+  return {
+    activos,
+    maximo,
+    bloqueadoHasta: penal.bloqueado ? penal.puedePedirEn.toISOString() : null,
+  };
 }
 
 /**
@@ -154,8 +191,14 @@ export async function franjasPara(consulta: ConsultaFranjas) {
   const cierreDe = (fin: Date): string =>
     new Date(fin.getTime() - (tMax + comercio.margenCutoffMin) * 60_000).toISOString();
 
+  const limites =
+    consulta.sesion?.rol === "ESTUDIANTE"
+      ? await limitesDe(consulta.sesion.usuarioId, comercio.maxPedidosActivos, ahora)
+      : null;
+
   return {
     comercioId: comercio.id,
+    limites,
     cargaEstimadaMin: carga,
     total: total.toFixed(2),
     condicion: consulta.condicion,

@@ -69,14 +69,19 @@ export function expiracionSesion(desde = new Date()): Date {
 }
 
 /**
- * Asignación a la condición experimental (§6.4).
+ * Condición con la que opera el producto desde el piloto comercial (ADR-27).
  *
- * Aleatoria por usuario, decidida en el SERVIDOR al momento del registro y
- * persistida. Nunca se recalcula: si dependiera del navegador, borrar cookies o
- * cambiar de teléfono movería al usuario de A a B y contaminaría el experimento.
+ * El experimento A/B (§6.4) se apagó: todos reciben la franja sugerida (B). La
+ * columna `condicion_experimental` y los datos ya recogidos se conservan para
+ * poder comparar los períodos anteriores; solo cambia lo que se muestra y lo
+ * que se asigna desde ahora. Para volver a encenderlo: restaurar
+ * `asignarCondicion` aleatoria y quitar los usos de esta constante.
  */
+export const CONDICION_VIGENTE = "B" as const;
+
+/** Asignación al registrarse. Con el experimento apagado, siempre B (ADR-27). */
 export function asignarCondicion(): "A" | "B" {
-  return randomBytes(1)[0] % 2 === 0 ? "A" : "B";
+  return CONDICION_VIGENTE;
 }
 
 export interface EstadoToken {

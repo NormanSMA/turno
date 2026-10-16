@@ -18,6 +18,7 @@ import { prisma } from "./db";
 import { auth, COOKIE_SESION } from "./auth-motor";
 import {
   asignarCondicion,
+  CONDICION_VIGENTE,
   esCorreoInstitucional,
   evaluarToken,
   expiracionEnlace,
@@ -177,7 +178,9 @@ export async function sesionActual(): Promise<SesionActiva | null> {
     rol: extra.rol,
     comercioId: extra.comercioId ?? null,
     comercioSlug: comercio?.slug ?? null,
-    condicionExperimental: extra.condicionExperimental,
+    // Experimento apagado (ADR-27): también los usuarios que quedaron en A
+    // operan como B. La columna guarda su asignación original.
+    condicionExperimental: CONDICION_VIGENTE,
   };
 }
 

@@ -7,6 +7,7 @@
  */
 import { franjasPara } from "@/lib/catalogo";
 import { sesionActual } from "@/lib/auth";
+import { CONDICION_VIGENTE } from "@/core/identidad";
 import { cuerpo, fallo, manejarError, ok } from "@/lib/http";
 import { z } from "zod";
 
@@ -33,9 +34,9 @@ export async function POST(
     // La condición sale de la sesión (servidor), nunca del cliente. Sin sesión
     // se muestra la variante A: no se orienta la elección de un anónimo.
     const sesion = await sesionActual();
-    const condicion = sesion?.condicionExperimental ?? "A";
+    const condicion = sesion?.condicionExperimental ?? CONDICION_VIGENTE;
 
-    const r = await franjasPara({ slug, items, condicion });
+    const r = await franjasPara({ slug, items, condicion, sesion });
     if (!r) return fallo("NO_ENCONTRADO", "Comercio inexistente", 404);
     return ok(r);
   } catch (e) {

@@ -281,7 +281,8 @@ export function simular(p: ParametrosSimulacion): ResultadoSimulacion {
       // Tiempo REAL de cocina: t(p) con variabilidad. El sistema prometió con
       // el estimado; la cocina entrega con esto. La brecha es exactamente lo
       // que α existe para absorber.
-      const real = Math.max(1, normal(azar, w, w * p.variabilidadCocina));
+      // Un pedido sin minutos-cocina (w = 0) no se cocina: su tiempo real es 0.
+      const real = w === 0 ? 0 : Math.max(1, normal(azar, w, w * p.variabilidadCocina));
       const noShow = azar() < p.tasaNoShow;
       if (noShow) noShows++;
 

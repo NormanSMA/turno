@@ -66,10 +66,23 @@ export function cargaPedido(lineas: LineaPedido[]): number {
 }
 
 /**
- * Criterio de elegibilidad (§6.3): t(p) ≥ t_mín.
- * Un producto de preparación casi nula consume espacio de franja y genera una
- * promesa que cumplir sin ahorrarle tiempo al usuario: capacidad sin valor.
+ * Criterio de tiempo (§6.3): t(p) ≥ t_mín, o t(p) = 0.
+ * Un producto de preparación casi nula (0 < t < t_mín) consume espacio de franja
+ * y genera una promesa que cumplir sin ahorrarle tiempo al usuario: capacidad sin
+ * valor. El caso t = 0 es otra cosa: "sin cocina" (bebida fría, snack envasado).
+ * No consume minutos-cocina, así que no compite por capacidad y puede viajar en
+ * un pedido aunque la cocina esté llena (ADR-25).
  */
+export function tiempoElegible(
+  tiempoPreparacionMin: number,
+  tiempoMinAnticipable: number,
+): boolean {
+  return (
+    tiempoPreparacionMin === 0 || tiempoPreparacionMin >= tiempoMinAnticipable
+  );
+}
+
+/** Criterio de elegibilidad (§6.3) más disponibilidad y marca anticipable. */
 export function esElegible(
   producto: ProductoCarga,
   params: ParametrosComercio,
@@ -77,7 +90,7 @@ export function esElegible(
   return (
     producto.anticipable &&
     producto.disponible &&
-    producto.tiempoPreparacionMin >= params.tiempoMinAnticipable
+    tiempoElegible(producto.tiempoPreparacionMin, params.tiempoMinAnticipable)
   );
 }
 

@@ -19,6 +19,10 @@ const FranjaAgotada = dynamic(
   () => import("@/components/HojaFranjaAgotada").then((m) => m.HojaFranjaAgotada),
   { ssr: false },
 );
+const LoteFranja = dynamic(
+  () => import("@/components/HojaLoteFranja").then((m) => m.HojaLoteFranja),
+  { ssr: false },
+);
 const ProblemaCocina = dynamic(
   () => import("@/components/HojaProblemaCocina").then((m) => m.HojaProblemaCocina),
   { ssr: false },
@@ -59,4 +63,9 @@ export function HojaFranjaAgotadaCarga(props: ComponentProps<typeof FranjaAgotad
 export function HojaProblemaCocinaCarga(props: ComponentProps<typeof ProblemaCocina>) {
   const montada = useYaAbierta(props.pedido !== null);
   return montada ? <ProblemaCocina {...props} /> : null;
+}
+
+export function HojaLoteFranjaCarga(props: ComponentProps<typeof LoteFranja>) {
+  const montada = useYaAbierta(props.lote !== null);
+  return montada ? <LoteFranja {...props} /> : null;
 }

@@ -13,7 +13,7 @@
  * servidor tenga la ultima palabra.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ErrorApi } from "@/lib/cliente";
@@ -29,7 +29,12 @@ export interface PedidoCocina {
   franjaInicio: string;
   franjaFin: string;
   minutosRestantes: number;
-  items: { nombre: string; cantidad: number; tiempoPreparacionMin: number }[];
+  items: {
+    productoId: string;
+    nombre: string;
+    cantidad: number;
+    tiempoPreparacionMin: number;
+  }[];
 }
 
 export interface FranjaCocina {
@@ -49,6 +54,24 @@ export interface Tablero {
 }
 
 const COLUMNAS_VISIBLES: readonly string[] = ["RECIBIDO", "EN_PREPARACION", "LISTO"];
+
+/** Respuesta del servidor: el tablero completo o "no cambió nada". */
+export type RespuestaTablero =
+  | Tablero
+  | { sinCambios: true; generadoEn: string };
+
+/**
+ * Si el servidor dice "no cambió nada", se conserva el tablero previo y solo se
+ * refresca `generadoEn`. Sin tablero previo no hay nada que conservar: devuelve
+ * null para que el llamador pida el cuerpo completo.
+ */
+export function combinarTablero(
+  previo: Tablero | undefined,
+  r: RespuestaTablero,
+): Tablero | null {
+  if (!("sinCambios" in r)) return r;
+  return previo ? { ...previo, generadoEn: r.generadoEn } : null;
+}
 
 export const claveTablero = (slug: string) => ["cocina", slug] as const;
 
@@ -107,14 +130,56 @@ export function clasificarError(e: unknown, slug: string): ClasificacionError {
   };
 }
 
+/**
+ * GET del tablero con validador. Va con `fetch` y no con `api` porque necesita
+ * leer la cabecera `ETag` de la respuesta, que `api` no expone.
+ */
+async function pedirTablero(
+  slug: string,
+  etag: string | null,
+): Promise<{ respuesta: RespuestaTablero; etag: string | null }> {
+  const res = await fetch(`/api/cocina/${slug}`, {
+    headers: etag ? { "If-None-Match": etag } : {},
+  });
+  const texto = await res.text();
+  let datos: { codigo?: string; error?: string; detalle?: unknown } | null = null;
+  try {
+    datos = texto ? JSON.parse(texto) : null;
+  } catch {
+    datos = null;
+  }
+  if (!res.ok) {
+    throw new ErrorApi(
+      datos?.codigo ?? "ERROR",
+      datos?.error ?? "No se pudo completar la operación",
+      res.status,
+      datos?.detalle,
+    );
+  }
+  return { respuesta: datos as unknown as RespuestaTablero, etag: res.headers.get("ETag") };
+}
+
 export function useTableroCocina(slug: string) {
   const cliente = useQueryClient();
+  // ETag de la última respuesta que ESTE cliente recibió del servidor.
+  const etagRef = useRef<string | null>(null);
   const clave = claveTablero(slug);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
 
   const consulta = useQuery({
     queryKey: clave,
-    queryFn: () => api<Tablero>(`/api/cocina/${slug}`),
+    queryFn: async () => {
+      const previo = cliente.getQueryData<Tablero>(clave);
+      const primera = await pedirTablero(slug, previo ? etagRef.current : null);
+      const tablero = combinarTablero(previo, primera.respuesta);
+      if (tablero) {
+        etagRef.current = primera.etag;
+        return tablero;
+      }
+      const completa = await pedirTablero(slug, null);
+      etagRef.current = completa.etag;
+      return completa.respuesta as Tablero;
+    },
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -130,10 +195,22 @@ export function useTableroCocina(slug: string) {
   }, [errorAccion]);
 
   const mutacion = useMutation({
-    mutationFn: (v: { id: string; estado: string; nota?: string }) =>
+    mutationFn: (v: {
+      id: string;
+      estado: string;
+      nota?: string;
+      agotados?: string[];
+      entrega?: { codigo?: string; sinCodigo?: boolean };
+    }) =>
       api(`/api/pedidos/${v.id}/estado`, {
         method: "PATCH",
-        body: JSON.stringify({ estado: v.estado, ...(v.nota ? { nota: v.nota } : {}) }),
+        body: JSON.stringify({
+          estado: v.estado,
+          ...(v.nota ? { nota: v.nota } : {}),
+          ...(v.agotados?.length ? { agotados: v.agotados } : {}),
+          ...(v.entrega?.codigo ? { codigo: v.entrega.codigo } : {}),
+          ...(v.entrega?.sinCodigo ? { sinCodigo: true } : {}),
+        }),
       }),
     onMutate: async (v) => {
       setErrorAccion(null);
@@ -161,6 +238,22 @@ export function useTableroCocina(slug: string) {
     onSettled: () => cliente.invalidateQueries({ queryKey: clave }),
   });
 
+  // Avance en lote de una franja. Sin optimismo: el servidor decide cuáles
+  // pedidos avanzan y cuáles se omiten, y el tablero se recarga con su palabra.
+  const lote = useMutation({
+    mutationFn: (v: { franjaId: string; hacia: "EN_PREPARACION" | "LISTO" }) =>
+      api<{ avanzados: number; omitidos: number }>(
+        `/api/cocina/${slug}/franjas/${v.franjaId}/avanzar`,
+        { method: "POST", body: JSON.stringify({ hacia: v.hacia }) },
+      ),
+    onError: (e) => {
+      setErrorAccion(
+        e instanceof ErrorApi ? e.message : "No se pudo avanzar la franja.",
+      );
+    },
+    onSettled: () => cliente.invalidateQueries({ queryKey: clave }),
+  });
+
   const falla = consulta.error ? clasificarError(consulta.error, slug) : null;
 
   return {
@@ -169,7 +262,16 @@ export function useTableroCocina(slug: string) {
     desconectado: falla?.desconectado ?? false,
     sinSesion: falla?.sinSesion ?? false,
     ocupado: mutacion.isPending ? (mutacion.variables?.id ?? null) : null,
-    cambiarEstado: (id: string, estado: string, nota?: string) =>
-      mutacion.mutateAsync({ id, estado, nota }),
+    /** Franja con un avance en lote en curso. */
+    loteOcupado: lote.isPending ? (lote.variables?.franjaId ?? null) : null,
+    avanzarFranja: (franjaId: string, hacia: "EN_PREPARACION" | "LISTO") =>
+      lote.mutateAsync({ franjaId, hacia }),
+    cambiarEstado: (
+      id: string,
+      estado: string,
+      nota?: string,
+      agotados?: string[],
+      entrega?: { codigo?: string; sinCodigo?: boolean },
+    ) => mutacion.mutateAsync({ id, estado, nota, agotados, entrega }),
   };
 }

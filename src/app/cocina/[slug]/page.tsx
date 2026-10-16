@@ -21,8 +21,9 @@ import { mismoCodigo, normalizarCodigo, pareceCompleto } from "@/core/codigo-ret
 import { ErrorVista, Esqueleto } from "@/components/estados-ui";
 import { prioridadCocina } from "@/core/urgencia";
 import { proximoCuello } from "@/core/cuello";
+import { totalAProducir } from "@/core/produccion";
 import { Icono } from "@/components/iconos";
-import { HojaProblemaCocinaCarga } from "@/components/HojasCarga";
+import { HojaLoteFranjaCarga, HojaProblemaCocinaCarga } from "@/components/HojasCarga";
 import { useAhora } from "@/lib/reloj";
 import {
   despertarAudio,
@@ -71,15 +72,21 @@ export default function Pagina({
 }) {
   const { slug } = use(params);
   const router = useRouter();
-  const { tablero, error, desconectado, sinSesion, ocupado, cambiarEstado } =
-    useTableroCocina(slug);
+  const {
+    tablero,
+    error,
+    desconectado,
+    sinSesion,
+    ocupado,
+    loteOcupado,
+    cambiarEstado,
+    avanzarFranja,
+  } = useTableroCocina(slug);
   // Un solo reloj para todo el tablero: si cada tarjeta llevara el suyo, dos
   // pedidos podrían mostrar urgencias calculadas con segundos distintos.
   const ahora = useAhora(15_000);
   // §32: el pedido sobre el que se está reportando un problema.
-  const [problema, setProblema] = useState<{ id: string; codigo: string } | null>(
-    null,
-  );
+  const [problema, setProblema] = useState<PedidoCocina | null>(null);
   // §30. Arranca apagado y la preferencia es del DISPOSITIVO: la tablet del
   // mostrador y la del fondo no quieren lo mismo, y son la misma cuenta.
   const sonido = useSonido();
@@ -125,18 +132,37 @@ export default function Pagina({
    * de transición, con sus validaciones y su liberación de capacidad— y le
    * agrega la nota. No hay un camino especial para cancelar desde la cocina.
    */
-  async function cancelarConMotivo(pedidoId: string, nota: string) {
+  async function cancelarConMotivo(
+    pedidoId: string,
+    nota: string,
+    agotados: string[],
+  ) {
     try {
-      await cambiarEstado(pedidoId, "CANCELADO", nota);
+      await cambiarEstado(pedidoId, "CANCELADO", nota, agotados);
       setProblema(null);
     } catch {
       // El hook ya revirtió la tarjeta y publicó el mensaje de error.
     }
   }
 
-  async function avanzar(p: PedidoCocina, hacia: EstadoPedido) {
+  /**
+   * `codigo` viene de la búsqueda o del escáner y se verifica en el servidor.
+   * Entregar desde la tarjeta no pasa por el código: se declara `sinCodigo` y
+   * queda anotado en el historial del pedido.
+   */
+  async function avanzar(p: PedidoCocina, hacia: EstadoPedido, codigo?: string) {
     try {
-      await cambiarEstado(p.id, hacia);
+      await cambiarEstado(
+        p.id,
+        hacia,
+        undefined,
+        undefined,
+        hacia === "RETIRADO"
+          ? codigo
+            ? { codigo }
+            : { sinCodigo: true }
+          : undefined,
+      );
     } catch {
       // El hook ya revirtió la tarjeta y publicó el mensaje de error.
     }
@@ -231,7 +257,12 @@ export default function Pagina({
         {tablero && <AvisoCuello pedidos={tablero.pedidos} ahora={ahora} />}
 
         {tablero && tablero.franjas.length > 0 && (
-          <CargaPorHora franjas={tablero.franjas} />
+          <CargaPorHora
+            franjas={tablero.franjas}
+            pedidos={tablero.pedidos}
+            loteOcupado={loteOcupado}
+            onAvanzarFranja={avanzarFranja}
+          />
         )}
 
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -328,7 +359,7 @@ function BuscarPedido({
 }: {
   pedidos: PedidoCocina[];
   ocupado: string | null;
-  onAvanzar: (p: PedidoCocina, hacia: EstadoPedido) => void;
+  onAvanzar: (p: PedidoCocina, hacia: EstadoPedido, codigo?: string) => void;
 }) {
   const [codigo, setCodigo] = useState("");
   const [escaneando, setEscaneando] = useState(false);
@@ -401,7 +432,7 @@ function BuscarPedido({
                 type="button"
                 disabled={ocupado === encontrado.id}
                 onClick={() => {
-                  onAvanzar(encontrado, accion.hacia);
+                  onAvanzar(encontrado, accion.hacia, codigo);
                   // Se limpia al actuar: en el mostrador viene otro detrás, y
                   // dejar el código puesto invita a tocar dos veces el mismo.
                   setCodigo("");
@@ -622,7 +653,50 @@ function TarjetaCocina({
  * en la regla, pero del lado de quien cocina: cuánto trabajo entra en cada
  * ventana y cuál está por llenarse.
  */
-function CargaPorHora({ franjas }: { franjas: FranjaCocina[] }) {
+function CargaPorHora({
+  franjas,
+  pedidos,
+  loteOcupado,
+  onAvanzarFranja,
+}: {
+  franjas: FranjaCocina[];
+  pedidos: PedidoCocina[];
+  loteOcupado: string | null;
+  onAvanzarFranja: (
+    franjaId: string,
+    hacia: "EN_PREPARACION" | "LISTO",
+  ) => Promise<{ avanzados: number; omitidos: number }>;
+}) {
+  const [lote, setLote] = useState<{
+    franja: FranjaCocina;
+    hacia: "EN_PREPARACION" | "LISTO";
+    cantidad: number;
+  } | null>(null);
+  const [omitidos, setOmitidos] = useState(0);
+  const produccion = franjas
+    .map((f) => {
+      const deFranja = pedidos.filter((p) => p.franjaInicio === f.inicio);
+      return {
+        franja: f,
+        total: totalAProducir(deFranja),
+        recibidos: deFranja.filter((p) => p.estado === "RECIBIDO").length,
+        enPreparacion: deFranja.filter((p) => p.estado === "EN_PREPARACION").length,
+      };
+    })
+    .filter((x) => x.total.length > 0);
+
+  async function confirmarLote() {
+    if (!lote) return;
+    const { franja, hacia } = lote;
+    try {
+      const r = await onAvanzarFranja(franja.id, hacia);
+      setOmitidos(r.omitidos);
+    } catch {
+      // El hook ya publicó el mensaje de error.
+    } finally {
+      setLote(null);
+    }
+  }
   return (
     <section aria-labelledby="carga" className="rounded-lg bg-papel-alto p-4">
       <h2 id="carga" className="etiqueta mb-3">
@@ -652,6 +726,58 @@ function CargaPorHora({ franjas }: { franjas: FranjaCocina[] }) {
           );
         })}
       </div>
+      {produccion.length > 0 && (
+        <ul aria-label="Total a producir por hora" className="mt-3 space-y-2">
+          {produccion.map(({ franja, total, recibidos, enPreparacion }) => (
+            <li
+              key={franja.id}
+              className="flex flex-wrap items-center gap-2 text-sm text-texto-2"
+            >
+              <span className="hora font-semibold">{horaCorta(franja.inicio)}</span>
+              <span className="min-w-0 flex-1">
+                {total.map((t) => `${t.cantidad}x ${t.nombre}`).join(" · ")}
+              </span>
+              {recibidos > 0 && (
+                <button
+                  type="button"
+                  disabled={loteOcupado === franja.id}
+                  onClick={() =>
+                    setLote({ franja, hacia: "EN_PREPARACION", cantidad: recibidos })
+                  }
+                  className="presiona min-h-12 rounded-full border border-borde px-4 font-semibold text-tinta disabled:opacity-40"
+                >
+                  Iniciar franja
+                </button>
+              )}
+              {enPreparacion > 0 && (
+                <button
+                  type="button"
+                  disabled={loteOcupado === franja.id}
+                  onClick={() =>
+                    setLote({ franja, hacia: "LISTO", cantidad: enPreparacion })
+                  }
+                  className="presiona min-h-12 rounded-full bg-marca-fondo px-4 font-semibold text-white disabled:opacity-40"
+                >
+                  Franja lista
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {omitidos > 0 && (
+        <p role="status" className="mt-2 rounded-sm bg-brasa-claro px-3 py-2 text-sm">
+          {omitidos === 1
+            ? "1 pedido ya había cambiado de estado y no se tocó."
+            : `${omitidos} pedidos ya habían cambiado de estado y no se tocaron.`}
+        </p>
+      )}
+      <HojaLoteFranjaCarga
+        lote={lote}
+        enviando={lote !== null && loteOcupado === lote.franja.id}
+        onCerrar={() => setLote(null)}
+        onConfirmar={confirmarLote}
+      />
       <p className="mt-2 text-xs text-tinta-suave">
         Minutos de cocina comprometidos sobre los disponibles. Cuando una hora se
         llena, el sistema deja de aceptar pedidos para ella y ofrece la

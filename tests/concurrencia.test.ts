@@ -166,8 +166,8 @@ describe("reserva concurrente sobre la última plaza", () => {
         comercioId: comercio.id,
         nombre: "Chicle",
         precio: "5.00",
-        tiempoPreparacionMin: 0,
-        anticipable: true, // marcado por error: el criterio t(p) >= t_min lo frena igual
+        tiempoPreparacionMin: 1,
+        anticipable: true, // marcado por error: 0 < t < t_min lo frena igual (t = 0 es "sin cocina", ADR-25)
       },
     });
 
@@ -186,6 +186,43 @@ describe("reserva concurrente sobre la última plaza", () => {
       where: { id: franjas[0].id },
     });
     expect(franja.cargaAsignada).toBe(0);
+  });
+
+  it("admite un pedido sin cocina (t = 0) con la franja llena y no suma carga (ADR-25)", async () => {
+    const { comercio, franjas, usuarios } = await montarEscenario(prisma, {
+      cantidadUsuarios: 1,
+    });
+    const agua = await prisma.producto.create({
+      data: {
+        comercioId: comercio.id,
+        nombre: "Agua",
+        precio: "10.00",
+        tiempoPreparacionMin: 0,
+        anticipable: true,
+      },
+    });
+    const llena = await prisma.franja.update({
+      where: { id: franjas[0].id },
+      data: {
+        cargaAsignada: Math.floor(
+          franjas[0].capacidadMinutos * Number(comercio.factorSeguridad),
+        ),
+      },
+    });
+
+    const r = await reservar(prisma, {
+      usuarioId: usuarios[0].id,
+      comercioId: comercio.id,
+      franjaSolicitadaId: franjas[0].id,
+      items: [{ productoId: agua.id, cantidad: 2 }],
+      idempotencyKey: crypto.randomUUID(),
+    });
+
+    expect(r.admitido).toBe(true);
+    const despues = await prisma.franja.findUniqueOrThrow({
+      where: { id: franjas[0].id },
+    });
+    expect(despues.cargaAsignada).toBe(llena.cargaAsignada);
   });
 
   it("registra la instrumentación exigida por el Capítulo V (§12)", async () => {

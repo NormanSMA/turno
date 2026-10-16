@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   asignarCondicion,
+  CONDICION_VIGENTE,
   esCorreoInstitucional,
   evaluarSesion,
   evaluarToken,
@@ -120,14 +121,13 @@ describe("vigencia", () => {
   });
 });
 
-describe("asignación experimental", () => {
-  it("reparte A y B de forma aproximadamente equilibrada", () => {
-    const n = 4000;
-    let a = 0;
-    for (let i = 0; i < n; i++) if (asignarCondicion() === "A") a++;
-    // Margen amplio: se comprueba que no está sesgado, no la aleatoriedad fina.
-    expect(a / n).toBeGreaterThan(0.44);
-    expect(a / n).toBeLessThan(0.56);
+describe("asignación experimental (apagada, ADR-27)", () => {
+  it("asigna siempre B", () => {
+    for (let i = 0; i < 200; i++) expect(asignarCondicion()).toBe("B");
+  });
+
+  it("la condición vigente es B", () => {
+    expect(CONDICION_VIGENTE).toBe("B");
   });
 });
 

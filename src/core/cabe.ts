@@ -123,7 +123,25 @@ export type EstadoAccion =
   | "NO_CABE"
   | "LISTO";
 
-export function textoAccion(e: EstadoAccion, total: string): string {
+/**
+ * La franja que se preselecciona sin que nadie la pida: la más temprana que
+ * admite el carrito. `opciones` viene ordenada por hora, igual que en
+ * `veredictoDeTurno`. Sin ninguna elegible devuelve `null`.
+ */
+export function primeraFranjaLibre<T extends FranjaVeredicto>(
+  opciones: readonly T[],
+  cargaMin: number,
+  ahora: Date,
+): T | null {
+  return opciones.find((o) => admite(o, cargaMin, ahora)) ?? null;
+}
+
+/** `hora` ya viene en formato local del comercio; con ella el botón dice para cuándo. */
+export function textoAccion(
+  e: EstadoAccion,
+  total: string,
+  hora?: string,
+): string {
   switch (e) {
     case "CERRADO":
       return "Cerrado ahora";
@@ -134,6 +152,6 @@ export function textoAccion(e: EstadoAccion, total: string): string {
     case "NO_CABE":
       return "Ver la próxima hora con lugar";
     case "LISTO":
-      return `Pedir ${total}`;
+      return hora ? `Pedir para ${hora}` : `Pedir ${total}`;
   }
 }

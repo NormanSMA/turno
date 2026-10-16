@@ -49,16 +49,27 @@ export function HojaProblemaCocina({
   onConfirmar,
 }: {
   /** `null` = cerrada. */
-  pedido: { id: string; codigo: string } | null;
+  pedido: {
+    id: string;
+    codigo: string;
+    items: { productoId: string; nombre: string; cantidad: number }[];
+  } | null;
   onCerrar: () => void;
-  onConfirmar: (pedidoId: string, nota: string) => Promise<void>;
+  /** `agotados`: productos que quedan sin disponibilidad; vacío = solo cancela. */
+  onConfirmar: (
+    pedidoId: string,
+    nota: string,
+    agotados: string[],
+  ) => Promise<void>;
 }) {
   const primero = useRef<HTMLButtonElement>(null);
   const [motivo, setMotivo] = useState<string | null>(null);
+  const [marcados, setMarcados] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
 
   const alCerrar = useCallback(() => {
     setMotivo(null);
+    setMarcados([]);
     onCerrar();
   }, [onCerrar]);
 
@@ -67,7 +78,11 @@ export function HojaProblemaCocina({
     const elegido = MOTIVOS.find((m) => m.id === motivo);
     setEnviando(true);
     try {
-      await onConfirmar(pedido.id, elegido?.nota ?? "Otro motivo operativo");
+      await onConfirmar(
+        pedido.id,
+        elegido?.nota ?? "Otro motivo operativo",
+        motivo === "AGOTADO" ? marcados : [],
+      );
       alCerrar();
     } finally {
       setEnviando(false);
@@ -129,6 +144,56 @@ export function HojaProblemaCocina({
             </li>
           ))}
         </ul>
+
+        {motivo === "AGOTADO" && pedido && pedido.items.length > 0 && (
+          <fieldset className="mt-4">
+            <legend className="text-sm font-semibold text-tinta">
+              Marcar como agotado en el menú
+            </legend>
+            <p className="mt-1 text-sm text-tinta-suave">
+              Opcional. Los productos marcados dejan de poder pedirse.
+            </p>
+            <ul className="mt-2 space-y-2">
+              {pedido.items.map((i) => {
+                const marcado = marcados.includes(i.productoId);
+                return (
+                  <li key={i.productoId}>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      disabled={enviando}
+                      aria-checked={marcado}
+                      onClick={() =>
+                        setMarcados((m) =>
+                          marcado
+                            ? m.filter((id) => id !== i.productoId)
+                            : [...m, i.productoId],
+                        )
+                      }
+                      className={`presiona flex min-h-12 w-full items-center gap-3 rounded-md border px-4 text-left text-sm font-medium ${
+                        marcado
+                          ? "border-marca-texto bg-turno-claro"
+                          : "border-borde"
+                      }`}
+                    >
+                      <span
+                        aria-hidden
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border-2 ${
+                          marcado ? "border-marca-texto" : "border-borde"
+                        }`}
+                      >
+                        {marcado && (
+                          <span className="h-2 w-2 rounded-sm bg-marca-fondo" />
+                        )}
+                      </span>
+                      {i.cantidad} × {i.nombre}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </fieldset>
+        )}
       </div>
 
       <div className="shrink-0 space-y-2 border-t border-borde px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">

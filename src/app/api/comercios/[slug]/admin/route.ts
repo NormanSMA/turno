@@ -9,6 +9,7 @@ import { pedidosVivosPorFranja } from "@/lib/comercio";
 import { cuerpo, manejarError, ok } from "@/lib/http";
 import { esquemaParametros } from "@/lib/esquemas";
 import { capacidadSugerida } from "@/core/administracion";
+import { tiempoElegible } from "@/core/admision";
 
 export async function GET(
   _req: Request,
@@ -68,7 +69,7 @@ export async function GET(
           p.anticipable &&
           p.disponible &&
           !p.archivado &&
-          p.tiempoPreparacionMin >= comercio.tiempoMinAnticipable,
+          tiempoElegible(p.tiempoPreparacionMin, comercio.tiempoMinAnticipable),
       })),
       franjas: franjas.map((f) => ({
         id: f.id,

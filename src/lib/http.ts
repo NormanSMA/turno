@@ -7,6 +7,7 @@
  * responde 500 donde debía responder 403.
  */
 
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { NoAutenticado, NoAutorizado } from "./auth";
@@ -58,11 +59,20 @@ export const CABECERA_SIN_CAMBIOS = "X-Turno-Sin-Cambios";
  * 200 con cuerpo mínimo y una cabecera que el worker entiende. El ahorro se
  * conserva: la consulta pesada igual no se ejecuta.
  */
-export function sinCambios(etag: string) {
+export function sinCambios(etag: string, extra: Record<string, unknown> = {}) {
   return NextResponse.json(
-    { sinCambios: true },
+    { sinCambios: true, ...extra },
     { status: 200, headers: { ETag: etag, [CABECERA_SIN_CAMBIOS]: "1" } },
   );
+}
+
+/**
+ * ETag débil derivado del contenido, para rutas sin una columna de versión.
+ * Misma entrada, mismo validador: no depende del orden de llegada ni del reloj.
+ */
+export function etagDeCuerpo(datos: unknown): string {
+  const hash = createHash("sha1").update(JSON.stringify(datos)).digest("base64url");
+  return `W/"c-${hash}"`;
 }
 
 /** ¿El cliente ya tiene esta versión? Compara con la lista de `If-None-Match`. */

@@ -14,6 +14,7 @@ import { expect, test } from "@playwright/test";
 import { consultar, entrar } from "./sesion";
 
 const ESTUDIANTE = "estudiante001@uam.edu.ni";
+const ESTUDIANTE_FLUJO = "flujo.e2e@uam.edu.ni";
 
 /**
  * El comercio sobre el que se hace el flujo de compra.
@@ -77,7 +78,30 @@ test.describe("lo público, sin sesión", () => {
 
 test.describe("flujo completo del estudiante", () => {
   test("armar el carrito, confirmar y recibir un código de retiro", async ({ page, context }) => {
-    await entrar(context, ESTUDIANTE);
+    // El límite de pedidos activos se avisa ANTES de confirmar y apaga el botón
+    // (D4). Con el estudiante compartido, los pedidos de otras corridas y de
+    // otras pruebas (algunos ya en LISTO, que el estudiante no puede cancelar)
+    // dejaban el botón en "Ya tenés el máximo". Este flujo usa su propio
+    // estudiante y cancela, por la API real, lo que dejó la corrida anterior:
+    // así la capacidad de la franja también se libera.
+    await consultar(
+      `INSERT INTO usuario (id, correo, rol, "condicionExperimental", consentimiento)
+       VALUES (gen_random_uuid(), $1, 'ESTUDIANTE', 'B', true)
+       ON CONFLICT (correo) DO NOTHING`,
+      [ESTUDIANTE_FLUJO],
+    );
+    await entrar(context, ESTUDIANTE_FLUJO);
+    const activos = await consultar<{ id: string }>(
+      `SELECT p.id FROM pedido p JOIN usuario u ON u.id = p."usuarioId"
+        WHERE u.correo = $1 AND p.estado IN ('RECIBIDO','EN_PREPARACION','LISTO')`,
+      [ESTUDIANTE_FLUJO],
+    );
+    for (const { id } of activos) {
+      const r = await context.request.patch(`/api/pedidos/${id}/estado`, {
+        data: { estado: "CANCELADO" },
+      });
+      expect(r.status(), `cancelar el pedido ${id} de la corrida anterior`).toBe(200);
+    }
 
     await page.goto(`/c/${COMERCIO}`);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -103,35 +127,17 @@ test.describe("flujo completo del estudiante", () => {
       timeout: 15_000,
     });
 
-    // El botón NO dice "Confirmar pedido": dice qué falta. Sin hora elegida
-    // dice "Elegí una hora de retiro" y está apagado; con hora, "Pedir C$ …".
-    // Esa es la regla del sistema —un botón apagado siempre dice por qué— y
-    // por eso la prueba se ancla en los dos textos y no en uno genérico: si
-    // alguien vuelve a poner "Confirmar pedido" en gris, esto falla.
+    // El botón NO dice "Confirmar pedido": dice qué hace. Con el experimento A/B
+    // apagado (ADR-27) la franja sugerida llega preseleccionada, así que el botón
+    // dice "Pedir para HH:MM" y está habilitado sin un paso previo de elegir hora.
+    // Si alguien vuelve a poner "Confirmar pedido" genérico, esto falla.
     //
-    // Hay DOS: uno en la barra fija de abajo y otro en el resumen. El primero
-    // del DOM mide 0x0 —está, pero no se ve—, así que `.first()` clicaba en el
-    // vacío y la prueba se colgaba esperando un POST que nadie iba a hacer. Se
-    // pide el visible explícitamente.
-    const sinHora = page
-      .getByRole("button", { name: /^Elegí una hora de retiro$/i })
-      .filter({ visible: true })
-      .first();
-    await expect(sinHora).toBeVisible({ timeout: 15_000 });
-    await expect(sinHora).toBeDisabled();
-
-    // Se localiza por su contenido —una hora y el margen en palabras— y no por
-    // nombre accesible, que en estos botones se arma de varios nodos.
-    const franja = page
-      .locator("button")
-      .filter({ hasText: /\d{1,2}:\d{2}/ })
-      .filter({ hasText: /Llegás con margen|Justo a tiempo/ })
-      .first();
-    await expect(franja).toBeVisible({ timeout: 15_000 });
-    await franja.click();
-
+    // Hay DOS botones: uno en la barra fija de abajo y otro en el resumen. El
+    // primero del DOM mide 0x0 —está, pero no se ve—, así que `.first()` clicaba
+    // en el vacío y la prueba se colgaba esperando un POST que nadie iba a hacer.
+    // Se pide el visible explícitamente.
     const confirmar = page
-      .getByRole("button", { name: /^Pedir C\$/i })
+      .getByRole("button", { name: /^Pedir para \d{1,2}:\d{2}/i })
       .filter({ visible: true })
       .first();
     await expect(confirmar).toBeEnabled({ timeout: 10_000 });

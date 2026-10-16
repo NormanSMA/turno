@@ -43,7 +43,8 @@ import {
   veredictoDeTurno,
   type EstadoAccion,
 } from "@/core/cabe";
-import { rearmarCarrito } from "@/core/repetir";
+import { avisoLimites, type AvisoLimites } from "@/core/aviso-limites";
+import { franjaPreseleccionada, rearmarCarrito } from "@/core/repetir";
 import {
   guardarCarrito,
   leerCarritoGuardado,
@@ -207,6 +208,9 @@ export function ClienteComercio({
   const [franjas, setFranjas] = useState<RespuestaFranjas | null>(null);
   const [elegida, setElegida] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Guarda inmediata contra el doble toque: `enviando` solo cambia en el
+  // siguiente render, y dos toques seguidos entran antes de que ocurra.
+  const envioEnCurso = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState<RespuestaPedido | null>(null);
   /*
@@ -297,16 +301,21 @@ export function ClienteComercio({
     inicial.restauradoHaceMin,
   );
   const [omitidos, setOmitidos] = useState<string[]>([]);
+  // Inicio de la franja del pedido repetido: la hora habitual de esa persona.
+  const inicioHabitual = useRef<string | null>(null);
   useEffect(() => {
     const repetir = parametros.get("repetir");
     if (!repetir) return;
     let cancelado = false;
 
-    api<{ items: { productoId: string; nombre: string; cantidad: number }[] }>(
-      `/api/pedidos/${repetir}`,
-    )
+    api<{
+      items: { productoId: string; nombre: string; cantidad: number }[];
+      franjaInicio?: string;
+    }>(`/api/pedidos/${repetir}`)
       .then((anterior) => {
         if (cancelado) return;
+        // Antes de setCarrito: ese cambio dispara las franjas, que lo leen.
+        inicioHabitual.current = anterior.franjaInicio ?? null;
         const { carrito: nuevo, omitidos: fuera } = rearmarCarrito(
           anterior.items,
           productos,
@@ -442,9 +451,17 @@ export function ClienteComercio({
         setElegida((prev) => {
           const sigue = prev && r.opciones.some((o) => o.franjaId === prev);
           if (sigue) return prev;
-          // En condición B se preselecciona la sugerida: esa preselección ES la
-          // intervención. En A no se preselecciona nada.
-          return r.condicion === "B" ? r.sugeridaId : null;
+          // Todos operan como B (ADR-27): ya no hay grupo A. Se preselecciona
+          // la hora habitual del pedido repetido si sigue admitiendo el
+          // carrito; si no, la sugerida.
+          return franjaPreseleccionada(
+            inicioHabitual.current,
+            r.sugeridaId,
+            r.opciones,
+            r.cargaEstimadaMin,
+            new Date(),
+            horaCorta,
+          );
         });
       })
       .catch(() => !cancelado && setFranjas(null));
@@ -497,6 +514,8 @@ export function ClienteComercio({
     const franja =
       typeof franjaForzada === "string" ? franjaForzada : elegida;
     if (!franjas || !franja) return;
+    if (envioEnCurso.current) return;
+    envioEnCurso.current = true;
     setEnviando(true);
     setError(null);
 
@@ -510,6 +529,7 @@ export function ClienteComercio({
     const novedades = await revalidar();
     if (novedades.length > 0) {
       setRevisando(false);
+      envioEnCurso.current = false;
       setEnviando(false);
       return;
     }
@@ -579,6 +599,7 @@ export function ClienteComercio({
           : "No pudimos confirmar el pedido. Revisá tu conexión y probá de nuevo.",
       );
     } finally {
+      envioEnCurso.current = false;
       setEnviando(false);
     }
   }
@@ -643,6 +664,7 @@ export function ClienteComercio({
   const unidades = items.reduce((n, i) => n + i.cantidad, 0);
   const franjaElegida =
     franjas?.opciones.find((o) => o.franjaId === elegida) ?? null;
+  const horaElegida = franjaElegida ? horaCorta(franjaElegida.inicio) : undefined;
 
   /*
    * El veredicto y, con él, lo que dice el botón.
@@ -668,6 +690,20 @@ export function ClienteComercio({
         : veredicto?.tipo === "NO_CABE"
           ? "NO_CABE"
           : "LISTO";
+
+  // Aviso previo de los límites. El servidor sigue decidiendo al confirmar;
+  // esto solo evita que el estudiante se entere recién al fallar.
+  const aviso: AvisoLimites | null = franjas?.limites
+    ? avisoLimites({
+        activos: franjas.limites.activos,
+        maximo: franjas.limites.maximo,
+        bloqueadoHasta: franjas.limites.bloqueadoHasta
+          ? new Date(franjas.limites.bloqueadoHasta)
+          : null,
+        ahora: ahoraVeredicto,
+      })
+    : null;
+  const limitado = aviso?.nivel === "lleno" || aviso?.nivel === "bloqueado";
 
   return (
     <>
@@ -1040,7 +1076,7 @@ export function ClienteComercio({
                       opciones={franjas.opciones}
                       elegidaId={elegida}
                       cargaPedidoMin={franjas.cargaEstimadaMin}
-                      mostrarSugerencia={franjas.condicion === "B"}
+                      mostrarSugerencia
                       onElegir={setElegida}
                     />
                   ) : (
@@ -1058,13 +1094,27 @@ export function ClienteComercio({
                     </div>
                   )}
 
+                  {aviso && aviso.nivel !== "libre" && (
+                    <p
+                      id="aviso-limites"
+                      role="status"
+                      className={`mt-3 rounded-md border border-borde bg-superficie-2 px-3 py-2 text-sm ${
+                        limitado ? "font-semibold text-aviso-texto" : "text-texto-2"
+                      }`}
+                    >
+                      {aviso.texto}
+                    </p>
+                  )}
+
                   <div className="mt-4 hidden items-center justify-between gap-3 lg:flex">
                     <span className="hora text-lg font-semibold">
                       {cordobas(franjas?.total ?? 0)}
                     </span>
                     <BotonConfirmar
+                      limite={limitado ? aviso : null}
                       estado={estadoAccion}
                       total={cordobas(franjas?.total ?? 0)}
+                      hora={horaElegida}
                       enviando={enviando}
                       hayRed={hayRed}
                       onClick={() => {
@@ -1181,8 +1231,10 @@ export function ClienteComercio({
             </div>
 
             <BotonConfirmar
+              limite={limitado ? aviso : null}
               estado={estadoAccion}
               total={cordobas(franjas?.total ?? 0)}
+              hora={horaElegida}
               enviando={enviando}
               hayRed={hayRed}
               onClick={() => {
@@ -1244,14 +1296,20 @@ function ContadorCarrito({ n }: { n: number }) {
  * frente a un callejón cuando el sistema ya sabe la salida.
  */
 function BotonConfirmar({
+  limite,
   estado,
   total,
+  hora,
   enviando,
   hayRed,
   onClick,
 }: {
+  /** Aviso "lleno" o "bloqueado": apaga el botón y su texto es el motivo. */
+  limite: AvisoLimites | null;
   estado: EstadoAccion;
   total: string;
+  /** Hora local de la franja elegida; sin ella el botón dice el total. */
+  hora?: string;
   enviando: boolean;
   hayRed: boolean;
   onClick: () => void;
@@ -1260,20 +1318,33 @@ function BotonConfirmar({
   // ya no existe, y hacerle creer al estudiante que tiene un pedido que nunca
   // se creó (§38).
   const apagado =
-    !hayRed || enviando || estado === "CERRADO" || estado === "VACIO" || estado === "SIN_HORA";
+    !hayRed ||
+    enviando ||
+    limite !== null ||
+    estado === "CERRADO" ||
+    estado === "VACIO" ||
+    estado === "SIN_HORA";
 
   return (
     <button
       type="button"
       disabled={apagado}
       onClick={onClick}
+      // El motivo completo está en el aviso junto al botón (#aviso-limites);
+      // el rótulo es corto porque el botón comparte fila con el total.
+      title={limite?.texto}
+      aria-describedby={limite ? "aviso-limites" : undefined}
       className="presiona shrink-0 rounded-md bg-marca-fondo px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
     >
       {!hayRed
         ? "Sin conexión"
         : enviando
           ? "Confirmando…"
-          : textoAccion(estado, total)}
+          : limite
+            ? limite.nivel === "bloqueado"
+              ? "Pedidos bloqueados"
+              : "Ya tenés el máximo"
+            : textoAccion(estado, total, hora)}
     </button>
   );
 }

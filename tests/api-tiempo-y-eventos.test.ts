@@ -221,7 +221,7 @@ describe("un pedido no se puede retirar dos veces", () => {
       return REstado.PATCH(
         peticion(`/api/pedidos/${pedido.id}/estado`, {
           method: "PATCH",
-          body: { estado: "RETIRADO" },
+          body: { estado: "RETIRADO", codigo: pedido.codigo },
         }),
         ctx({ id: pedido.id }),
       );
@@ -266,7 +266,7 @@ describe("un pedido no se puede retirar dos veces", () => {
       REstado.PATCH(
         peticion(`/api/pedidos/${pedido.id}/estado`, {
           method: "PATCH",
-          body: { estado: "RETIRADO" },
+          body: { estado: "RETIRADO", codigo: pedido.codigo },
         }),
         ctx({ id: pedido.id }),
       );
@@ -301,10 +301,86 @@ describe("un pedido no se puede retirar dos veces", () => {
     const r = await REstado.PATCH(
       peticion(`/api/pedidos/${pedido.id}/estado`, {
         method: "PATCH",
-        body: { estado: "RETIRADO" },
+        body: { estado: "RETIRADO", codigo: pedido.codigo },
       }),
       ctx({ id: pedido.id }),
     );
     expect(r.status).toBe(409);
+  });
+});
+
+describe("entregar exige el código de retiro", () => {
+  async function pedidoListo(codigo: string) {
+    await limpiar(db);
+    const e = await montarEscenario(db, { cantidadUsuarios: 1 });
+    const pedido = await db.pedido.create({
+      data: {
+        usuarioId: e.usuarios[0]!.id,
+        franjaId: e.franjas[0]!.id,
+        idempotencyKey: crypto.randomUUID(),
+        codigo,
+        estado: "LISTO",
+        listoEn: new Date(),
+        total: "120.00",
+        cargaEstimadaMin: 10,
+        condicionExperimental: "A",
+      },
+    });
+    return { e, pedido };
+  }
+
+  const entregar = (id: string, body: Record<string, unknown>) =>
+    REstado.PATCH(
+      peticion(`/api/pedidos/${id}/estado`, {
+        method: "PATCH",
+        body: { estado: "RETIRADO", ...body },
+      }),
+      ctx({ id }),
+    );
+
+  it("sin código ni declaración, el comercio recibe 400 y el pedido no cambia", async () => {
+    const { e, pedido } = await pedidoListo("COD-001");
+    const op = await crearOperador(db, "COMERCIO", e.comercio.id);
+    await entrarComo(db, op.id);
+    const r = await entregar(pedido.id, {});
+    expect(r.status).toBe(400);
+    expect((await db.pedido.findUniqueOrThrow({ where: { id: pedido.id } })).estado).toBe("LISTO");
+  });
+
+  it("con un código de otro pedido recibe 403 y el pedido no cambia", async () => {
+    const { e, pedido } = await pedidoListo("COD-002");
+    const op = await crearOperador(db, "COMERCIO", e.comercio.id);
+    await entrarComo(db, op.id);
+    const r = await entregar(pedido.id, { codigo: "ZZZ-999" });
+    expect(r.status).toBe(403);
+    expect((await db.pedido.findUniqueOrThrow({ where: { id: pedido.id } })).estado).toBe("LISTO");
+  });
+
+  it("acepta el código escrito de otra forma (minúsculas, sin guion)", async () => {
+    const { e, pedido } = await pedidoListo("COD-003");
+    const op = await crearOperador(db, "COMERCIO", e.comercio.id);
+    await entrarComo(db, op.id);
+    const r = await entregar(pedido.id, { codigo: "cod003" });
+    expect(r.status).toBe(200);
+  });
+
+  it("sinCodigo entrega y deja la declaración en el historial", async () => {
+    const { e, pedido } = await pedidoListo("COD-004");
+    const op = await crearOperador(db, "COMERCIO", e.comercio.id);
+    await entrarComo(db, op.id);
+    const r = await entregar(pedido.id, { sinCodigo: true });
+    expect(r.status).toBe(200);
+    const evento = await db.eventoPedido.findFirstOrThrow({
+      where: { pedidoId: pedido.id, estado: "RETIRADO" },
+    });
+    expect(evento.nota).toBe("Entregado sin verificar el código");
+  });
+
+  it("el administrador no entrega: observa, no opera", async () => {
+    const { pedido } = await pedidoListo("COD-005");
+    const admin = await crearOperador(db, "ADMIN", null);
+    await entrarComo(db, admin.id);
+    const r = await entregar(pedido.id, { codigo: "COD-005" });
+    expect(r.status).toBe(403);
   });
 });

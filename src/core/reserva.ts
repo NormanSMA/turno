@@ -28,6 +28,7 @@ import {
 } from "./admision";
 import { ALFABETO_CODIGO, LARGO_CODIGO } from "./codigo-retiro";
 import { ESTADOS_ACTIVOS } from "./estados";
+import { CONDICION_VIGENTE } from "./identidad";
 import { evaluarPenalizacion, VENTANA_NO_SHOW_DIAS } from "./penalizacion";
 
 export interface SolicitudPedido {
@@ -307,7 +308,8 @@ async function ejecutarAdmision(
   ahoraInyectado: Date | undefined,
 ): Promise<ResultadoReserva> {
   const alfa = params.factorSeguridad;
-  const condicion = usuario.condicionExperimental as CondicionExperimental;
+  // Experimento apagado (ADR-27): todos se admiten con la lógica de B.
+  const condicion: CondicionExperimental = CONDICION_VIGENTE;
 
   return prisma.$transaction(
     async (tx) => {
@@ -547,7 +549,7 @@ async function ejecutarAdmision(
           idempotencyKey: solicitud.idempotencyKey,
           usuarioId: solicitud.usuarioId,
           franjaId: destino.id,
-          condicionExperimental: usuario.condicionExperimental,
+          condicionExperimental: condicion,
           franjaSolicitadaId: solicitud.franjaSolicitadaId,
           franjasOfrecidas: opciones.opciones as unknown as Prisma.InputJsonValue,
           motivoAsignacion:

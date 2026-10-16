@@ -54,9 +54,20 @@ export const esquemaCambioEstado = z.object({
     "CANCELADO",
   ]),
   nota: z.string().trim().max(280).optional(),
+  /** Productos del pedido que quedan agotados. Solo con estado CANCELADO. */
+  agotados: z.array(z.string().uuid()).max(30).optional(),
+  /** Código de retiro que el comercio leyó o escaneó. Obligatorio con RETIRADO. */
+  codigo: z.string().trim().max(32).optional(),
+  /** Entrega sin verificar el código: queda anotado en el evento del pedido. */
+  sinCodigo: z.boolean().optional(),
 });
 
-export type EntradaPedido = z.infer<typeof esquemaPedido>;
+/** Avance en lote de una franja: solo los dos pasos de la cocina. */
+export const esquemaAvanceFranja = z.object({
+  hacia: z.enum(["EN_PREPARACION", "LISTO"]),
+});
+
+export type EntradaPedido =z.infer<typeof esquemaPedido>;
 
 // ------------------------------------------- Administración del comercio ---
 

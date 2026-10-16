@@ -30,6 +30,26 @@ function pedido(p: Partial<PedidoInforme> = {}): PedidoInforme {
   };
 }
 
+describe("pedidos sin minutos-cocina (tiempo declarado 0)", () => {
+  it("cuentan como venta, suman 0 minutos y no producen NaN", () => {
+    const c = calcularCifras([pedido({ cargaMin: 0, total: 40 })]);
+    expect(c.vendidos).toBe(1);
+    expect(c.ventas).toBe(40);
+    expect(c.minutosCocinados).toBe(0);
+    expect(c.ticketPromedio).toBe(40);
+    expect(Number.isFinite(c.minutosCocinados)).toBe(true);
+  });
+
+  it("en un día mixto los minutos salen solo de lo que se cocinó", () => {
+    const c = calcularCifras([
+      pedido({ cargaMin: 0, total: 40 }),
+      pedido({ cargaMin: 12, total: 100 }),
+    ]);
+    expect(c.minutosCocinados).toBe(12);
+    expect(c.vendidos).toBe(2);
+  });
+});
+
 describe("lo que cuenta como venta", () => {
   it("solo suma los pedidos retirados", () => {
     const c = calcularCifras([

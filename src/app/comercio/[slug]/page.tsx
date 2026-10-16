@@ -32,6 +32,7 @@ import {
   type Sesion,
 } from "@/lib/sesion-cliente";
 import { SelectorFoto } from "@/components/SelectorFoto";
+import { tiempoElegible } from "@/core/admision";
 import { api, cordobas, ErrorApi, fechaCorta, horaCorta } from "@/lib/cliente";
 
 interface ProductoAdmin {
@@ -409,7 +410,8 @@ function FilaCatalogo({
   onEditar: () => void;
 }) {
   const inutil =
-    producto.anticipable && producto.tiempoPreparacionMin < tiempoMin;
+    producto.anticipable &&
+    !tiempoElegible(producto.tiempoPreparacionMin, tiempoMin);
 
   return (
     <li className="tarjeta flex gap-3 overflow-hidden p-3">
@@ -556,7 +558,7 @@ function FormularioProducto({
    */
   const [tocado, setTocado] = useState(producto !== null);
   const [anticipable, setAnticipable] = useState(producto?.anticipable ?? true);
-  const sugerido = tiempo !== "" && Number(tiempo) >= tiempoMin;
+  const sugerido = tiempo !== "" && tiempoElegible(Number(tiempo), tiempoMin);
   const anticipaEfectivo = tocado ? anticipable : sugerido;
 
   const [foto, setFoto] = useState<{

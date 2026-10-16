@@ -11,10 +11,12 @@ import { describe, expect, it } from "vitest";
 import {
   admite,
   margenDe,
+  primeraFranjaLibre,
   textoAccion,
   veredictoDeTurno,
   type FranjaVeredicto,
 } from "@/core/cabe";
+import { horaCorta } from "@/lib/cliente";
 
 const AHORA = new Date("2026-08-29T12:00:00Z");
 
@@ -132,5 +134,37 @@ describe("el texto del botón", () => {
 
   it("cuando se puede pedir, lleva el total", () => {
     expect(textoAccion("LISTO", "C$ 165.00")).toBe("Pedir C$ 165.00");
+  });
+});
+
+describe("franja preseleccionada y texto del botón", () => {
+  it("elige la más temprana que admite el carrito", () => {
+    const opciones = [f("a", 5), f("b", 20, 40), f("c", 30, 60)];
+    expect(primeraFranjaLibre(opciones, 15, AHORA)?.franjaId).toBe("b");
+  });
+
+  it("salta las franjas con el cut-off vencido", () => {
+    const opciones = [f("a", 30, -5), f("b", 30, 20)];
+    expect(primeraFranjaLibre(opciones, 15, AHORA)?.franjaId).toBe("b");
+  });
+
+  it("devuelve null si ninguna admite", () => {
+    expect(primeraFranjaLibre([f("a", 5)], 15, AHORA)).toBeNull();
+    expect(primeraFranjaLibre([], 15, AHORA)).toBeNull();
+  });
+
+  it("el botón usa la hora local de Managua de la franja elegida", () => {
+    // 18:15Z es 12:15 en Managua (UTC-6, sin horario de verano).
+    expect(
+      textoAccion("LISTO", "C$ 165.00", horaCorta("2026-08-29T18:15:00Z")),
+    ).toBe("Pedir para 12:15");
+  });
+
+  it("con hora, el botón dice para cuándo; sin hora, el total", () => {
+    expect(textoAccion("LISTO", "C$ 165.00", "12:15")).toBe("Pedir para 12:15");
+    expect(textoAccion("LISTO", "C$ 165.00")).toBe("Pedir C$ 165.00");
+    expect(textoAccion("SIN_HORA", "C$ 165.00", "12:15")).toBe(
+      "Elegí una hora de retiro",
+    );
   });
 });

@@ -98,6 +98,12 @@ export interface OpcionFranjaUI {
 
 export interface RespuestaFranjas {
   comercioId: string;
+  /** Solo para un estudiante con sesión; `bloqueadoHasta` es ISO. */
+  limites: {
+    activos: number;
+    maximo: number;
+    bloqueadoHasta: string | null;
+  } | null;
   cargaEstimadaMin: number;
   total: string;
   condicion: "A" | "B";

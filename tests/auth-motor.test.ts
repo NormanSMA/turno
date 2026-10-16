@@ -109,13 +109,12 @@ describe("alta por Google (hook de creación de usuario)", () => {
     expect(["A", "B"]).toContain(u.condicionExperimental);
   });
 
-  it("riesgo 5: 40 altas reparten A y B y ninguna queda sin condición", async () => {
+  it("riesgo 5 (ADR-27): 40 altas quedan todas en B y ninguna sin condición", async () => {
     for (let i = 0; i < 40; i++) {
       await crear(`alta${i}.${crypto.randomUUID()}@uam.edu.ni`, true);
     }
     const condiciones = (await db.usuario.findMany()).map((u) => u.condicionExperimental);
-    expect(condiciones.every((c) => c === "A" || c === "B")).toBe(true);
-    expect(new Set(condiciones).size).toBe(2);
+    expect(condiciones.every((c) => c === "B")).toBe(true);
   });
 });
 

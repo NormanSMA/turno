@@ -6,14 +6,27 @@
  * sola es más robusta que una conexión persistente que hay que reconectar, y no
  * agrega infraestructura. La respuesta trae `generadoEn` para que la vista pueda
  * mostrar cuán fresca es.
+ *
+ * El sondeo casi siempre recibe lo mismo que ya tiene. El ETag sale del hash del
+ * cuerpo SIN `generadoEn` (que cambia en cada petición): `Franja` y `Comercio`
+ * no tienen columna de versión, así que un max(actualizadoEn) dejaría pasar
+ * cambios de carga o de estado de operación. Las consultas se siguen
+ * ejecutando; lo que se ahorra es reenviar el cuerpo.
  */
 import { prisma } from "@/lib/db";
 import { exigirRol, NoAutorizado } from "@/lib/auth";
 import { puedeVerCocina } from "@/core/autorizacion";
-import { fallo, manejarError, ok } from "@/lib/http";
+import {
+  coincideEtag,
+  etagDeCuerpo,
+  fallo,
+  manejarError,
+  okConEtag,
+  sinCambios,
+} from "@/lib/http";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ slug: string }> },
 ) {
   try {
@@ -46,8 +59,7 @@ export async function GET(
     });
 
     const alfa = Number(comercio.factorSeguridad);
-    return ok({
-      generadoEn: ahora.toISOString(),
+    const datos = {
       comercio: {
         id: comercio.id,
         nombre: comercio.nombre,
@@ -67,6 +79,7 @@ export async function GET(
         ),
         creadoEn: p.creadoEn.toISOString(),
         items: p.items.map((i) => ({
+          productoId: i.productoId,
           nombre: i.nombreProducto,
           cantidad: i.cantidad,
           tiempoPreparacionMin: i.tiempoPreparacionMin,
@@ -84,7 +97,12 @@ export async function GET(
             ? f.cargaAsignada / (f.capacidadMinutos * alfa)
             : 0,
       })),
-    });
+    };
+
+    const generadoEn = ahora.toISOString();
+    const etag = etagDeCuerpo(datos);
+    if (coincideEtag(req, etag)) return sinCambios(etag, { generadoEn });
+    return okConEtag({ generadoEn, ...datos }, etag);
   } catch (e) {
     return manejarError(e);
   }
