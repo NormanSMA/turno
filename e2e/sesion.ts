@@ -10,8 +10,9 @@
  * —leer un usuario, insertar una fila de sesión— y de paso deja el E2E
  * independiente del ORM: si mañana se cambia, esta suite no se entera.
  */
+import { readFileSync } from "node:fs";
 import { Client } from "pg";
-import { createHash, randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import type { BrowserContext } from "@playwright/test";
 
 const CADENA =
@@ -33,9 +34,28 @@ export async function consultar<T = Record<string, unknown>>(
   }
 }
 
-/** El mismo hash que producción: la sesión que se crea acá es una sesión real. */
-function hash(t: string) {
-  return createHash("sha256").update(t).digest("hex");
+/**
+ * Better Auth guarda el token tal cual y la cookie lleva `token.firma`, con la
+ * firma HMAC-SHA256 en base64 sobre el secreto de la aplicación (ADR-24). La
+ * sesión que se crea acá es una sesión real, no un doble.
+ */
+function cookieFirmada(token: string) {
+  // Se lee de `.env` sin cargarlo en el entorno: cargarlo pisaría `APP_URL`,
+  // que `playwright.config.ts` usa para decidir a qué servidor apuntar.
+  let secreto = process.env.BETTER_AUTH_SECRET;
+  if (!secreto) {
+    try {
+      const linea = readFileSync(".env", "utf8")
+        .split(/\r?\n/)
+        .find((l) => l.startsWith("BETTER_AUTH_SECRET="));
+      secreto = linea?.slice("BETTER_AUTH_SECRET=".length).replace(/^"|"$/g, "");
+    } catch {
+      /* se informa abajo */
+    }
+  }
+  if (!secreto) throw new Error("Falta BETTER_AUTH_SECRET para firmar la cookie");
+  const firma = createHmac("sha256", secreto).update(token).digest("base64");
+  return encodeURIComponent(`${token}.${firma}`);
 }
 
 export async function entrar(
@@ -48,17 +68,17 @@ export async function entrar(
   );
   if (!usuario) throw new Error(`No existe el usuario ${correo} en la base demo`);
 
-  const token = randomBytes(32).toString("base64url");
+  const token = randomBytes(24).toString("base64url");
   await consultar(
-    `INSERT INTO sesion (id, "usuarioId", "tokenHash", "expiraEn", "creadaEn")
-     VALUES (gen_random_uuid(), $1, $2, now() + interval '1 day', now())`,
-    [usuario.id, hash(token)],
+    `INSERT INTO session (id, token, "expiresAt", "userId", "createdAt", "updatedAt")
+     VALUES (gen_random_uuid(), $1, now() + interval '1 day', $2, now(), now())`,
+    [token, usuario.id],
   );
 
   await ctx.addCookies([
     {
       name: "turno_sesion",
-      value: token,
+      value: cookieFirmada(token),
       domain: "localhost",
       path: "/",
       httpOnly: true,

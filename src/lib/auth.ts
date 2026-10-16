@@ -5,17 +5,22 @@
  * directamente. Todo endpoint protegido pasa por `exigirSesion` / `exigirRol`,
  * y toda lectura de un pedido pasa por `puedeVerPedido` — que es la defensa
  * contra IDOR (cambiar el id en la URL para leer el pedido de otro).
+ *
+ * Esta es la FACHADA (ADR-24): los 27 archivos que autentican importan solo
+ * de acá. El motor de sesiones y el acceso con Google son Better Auth
+ * (`auth-motor.ts`); las reglas de TURNO —quién puede entrar y por cuál
+ * método— siguen en este archivo.
  */
 
+import { createHmac } from "node:crypto";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
+import { auth, COOKIE_SESION } from "./auth-motor";
 import {
   asignarCondicion,
   esCorreoInstitucional,
-  evaluarSesion,
   evaluarToken,
   expiracionEnlace,
-  expiracionSesion,
   generarToken,
   hashToken,
   normalizarCorreo,
@@ -34,7 +39,7 @@ import {
 
 export type { SesionActiva, RolUsuario };
 
-export const COOKIE_SESION = "turno_sesion";
+export { COOKIE_SESION };
 
 /** Atributos de la cookie. `httpOnly` la hace inaccesible a JavaScript, así que
  *  un XSS no puede robar la sesión; `sameSite: lax` corta el CSRF de escritura
@@ -65,36 +70,114 @@ export class NoAutorizado extends Error {
   }
 }
 
+// ------------------------------------------------------------------ Cookie ---
+
+/**
+ * Valor de la cookie para un token de sesión: `token.firma`, con la firma
+ * HMAC-SHA256 en base64 que Better Auth verifica. Devuelve el valor SIN
+ * codificar; quien lo ponga en una respuesta de Next lo codifica ahí.
+ */
+async function valorCookie(token: string): Promise<string> {
+  const { secret } = await auth.$context;
+  const firma = createHmac("sha256", secret).update(token).digest("base64");
+  return `${token}.${firma}`;
+}
+
+/** Cabeceras con solo la cookie de sesión, que es lo que Better Auth necesita. */
+async function cabecerasDeSesion(): Promise<Headers | null> {
+  const almacen = await cookies();
+  const bruto = almacen.get(COOKIE_SESION)?.value;
+  if (!bruto) return null;
+  let valor = bruto;
+  if (valor.includes("%")) {
+    try {
+      valor = decodeURIComponent(valor);
+    } catch {
+      return null;
+    }
+  }
+  return new Headers({ cookie: `${COOKIE_SESION}=${encodeURIComponent(valor)}` });
+}
+
+/** Crea la sesión en Better Auth y devuelve lo que el llamador pone en la cookie. */
+async function abrirSesion(
+  usuarioId: string,
+  userAgent?: string | null,
+): Promise<{ token: string; expiraEn: Date }> {
+  const ctx = await auth.$context;
+  const sesion = await ctx.internalAdapter.createSession(usuarioId, false, {
+    userAgent: userAgent ?? "",
+  });
+  return { token: await valorCookie(sesion.token), expiraEn: sesion.expiresAt };
+}
+
+/**
+ * Sesión para pruebas y para `scripts/sesion-dev.ts`. Se niega en producción:
+ * saltarse el enlace mágico solo tiene sentido con datos de mentira.
+ */
+export async function crearSesionParaPrueba(
+  usuarioId: string,
+  opciones: { expiraEn?: Date } = {},
+): Promise<{ token: string; expiraEn: Date }> {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("crearSesionParaPrueba no existe en producción");
+  }
+  const ctx = await auth.$context;
+  const sesion = await ctx.internalAdapter.createSession(usuarioId, false);
+  // `createSession` ignora un `expiresAt` impuesto: se fija después.
+  if (opciones.expiraEn) {
+    await prisma.session.update({
+      where: { id: sesion.id },
+      data: { expiresAt: opciones.expiraEn },
+    });
+  }
+  return {
+    token: await valorCookie(sesion.token),
+    expiraEn: opciones.expiraEn ?? sesion.expiresAt,
+  };
+}
+
 /** Lee la sesión del request. Devuelve null si no hay o si ya no vale. */
 export async function sesionActual(): Promise<SesionActiva | null> {
-  const almacen = await cookies();
-  const token = almacen.get(COOKIE_SESION)?.value;
-  if (!token) return null;
+  const headers = await cabecerasDeSesion();
+  if (!headers) return null;
 
-  const sesion = await prisma.sesion.findUnique({
-    where: { tokenHash: hashToken(token) },
-    /*
-     * Se trae también el slug del comercio, no solo su id.
-     *
-     * El id no sirve para construir una dirección, así que cada pantalla que
-     * necesitaba enlazar a "mi cocina" lo resolvía por su cuenta — y una lo
-     * hacía tomando el PRIMER comercio de la lista, que para un operador de
-     * Subway apuntaba a otro local. Con el slug en la sesión hay una sola
-     * respuesta a "cuál es mi comercio", y es la del servidor.
-     */
-    include: { usuario: { include: { comercio: { select: { slug: true } } } } },
-  });
-  if (!evaluarSesion(sesion).valido || !sesion) return null;
+  const datos = await auth.api.getSession({ headers });
+  if (!datos) return null;
+
+  const { session, user } = datos;
+  const extra = user as typeof user & {
+    rol?: RolUsuario;
+    comercioId?: string | null;
+    condicionExperimental?: "A" | "B";
+  };
+  if (!extra.rol || !extra.condicionExperimental) return null;
+
+  /*
+   * Se trae también el slug del comercio, no solo su id.
+   *
+   * El id no sirve para construir una dirección, así que cada pantalla que
+   * necesitaba enlazar a "mi cocina" lo resolvía por su cuenta — y una lo
+   * hacía tomando el PRIMER comercio de la lista, que para un operador de
+   * Subway apuntaba a otro local. Con el slug en la sesión hay una sola
+   * respuesta a "cuál es mi comercio", y es la del servidor.
+   */
+  const comercio = extra.comercioId
+    ? await prisma.comercio.findUnique({
+        where: { id: extra.comercioId },
+        select: { slug: true },
+      })
+    : null;
 
   return {
-    sesionId: sesion.id,
-    usuarioId: sesion.usuario.id,
-    correo: sesion.usuario.correo,
-    nombre: sesion.usuario.nombre,
-    rol: sesion.usuario.rol,
-    comercioId: sesion.usuario.comercioId,
-    comercioSlug: sesion.usuario.comercio?.slug ?? null,
-    condicionExperimental: sesion.usuario.condicionExperimental,
+    sesionId: session.id,
+    usuarioId: user.id,
+    correo: user.email,
+    nombre: user.name || null,
+    rol: extra.rol,
+    comercioId: extra.comercioId ?? null,
+    comercioSlug: comercio?.slug ?? null,
+    condicionExperimental: extra.condicionExperimental,
   };
 }
 
@@ -191,11 +274,13 @@ export async function emitirEnlace(
   datos: DatosRegistro = {},
 ): Promise<{ token: string; usuarioId: string; nuevo: boolean }> {
   const correo = normalizarCorreo(correoBruto);
-  if (!esCorreoInstitucional(correo)) {
+  const existente = await prisma.usuario.findUnique({ where: { correo } });
+
+  // Un correo ajeno al dominio entra solo si el equipo creó antes su cuenta
+  // demo (reclutadores, ADR-24). No se registra a nadie por su cuenta.
+  if (!esCorreoInstitucional(correo) && !existente?.esDemo) {
     throw new NoAutorizado("Se requiere un correo institucional de la UAM");
   }
-
-  const existente = await prisma.usuario.findUnique({ where: { correo } });
 
   // Las cuentas de operación NO entran por enlace mágico (ADR-08). Si se
   // permitiera, la contraseña dejaría de ser el control de acceso: bastaría con
@@ -246,9 +331,9 @@ export async function emitirEnlace(
 export type MotivoCanjeFallido = "INEXISTENTE" | "EXPIRADO" | "YA_USADO";
 
 /**
- * Canjea el enlace mágico por una sesión. El token se marca usado dentro de la
- * misma transacción que crea la sesión: dos clics sobre el mismo enlace no
- * producen dos sesiones.
+ * Canjea el enlace mágico por una sesión. El token se marca usado con un
+ * bloqueo de fila: dos clics sobre el mismo enlace no producen dos sesiones,
+ * porque el segundo ve el token ya usado.
  */
 export async function canjearEnlace(
   token: string,
@@ -259,7 +344,7 @@ export async function canjearEnlace(
 > {
   const hash = hashToken(token);
 
-  return prisma.$transaction(async (tx) => {
+  const canje = await prisma.$transaction(async (tx) => {
     const filas = await tx.$queryRaw<
       { id: string; usuarioId: string; expiraEn: Date; usadoEn: Date | null }[]
     >`
@@ -277,32 +362,22 @@ export async function canjearEnlace(
       where: { id: registro.id },
       data: { usadoEn: new Date() },
     });
-
-    const tokenSesion = generarToken();
-    const expiraEn = expiracionSesion();
-    await tx.sesion.create({
-      data: {
-        usuarioId: registro.usuarioId,
-        tokenHash: hashToken(tokenSesion),
-        expiraEn,
-        userAgent: userAgent ?? null,
-      },
+    // Abrir el enlace prueba que la persona controla el buzón.
+    await tx.usuario.update({
+      where: { id: registro.usuarioId },
+      data: { emailVerified: true },
     });
-
-    return {
-      ok: true as const,
-      token: tokenSesion,
-      expiraEn,
-      usuarioId: registro.usuarioId,
-    };
+    return { ok: true as const, usuarioId: registro.usuarioId };
   });
+
+  if (!canje.ok) return canje;
+
+  const sesion = await abrirSesion(canje.usuarioId, userAgent);
+  return { ok: true, usuarioId: canje.usuarioId, ...sesion };
 }
 
 export async function cerrarSesion(sesionId: string): Promise<void> {
-  await prisma.sesion.update({
-    where: { id: sesionId },
-    data: { revocadaEn: new Date() },
-  });
+  await prisma.session.deleteMany({ where: { id: sesionId } });
 }
 
 // ---------------------------------------------------- Acceso con credenciales ---
@@ -360,27 +435,15 @@ export async function accederConCredenciales(
     return { ok: false as const, motivo: "CREDENCIALES_INVALIDAS" };
   }
 
-  const tokenSesion = generarToken();
-  const expiraEn = expiracionSesion();
-  await prisma.$transaction([
-    prisma.sesion.create({
-      data: {
-        usuarioId: usuario.id,
-        tokenHash: hashToken(tokenSesion),
-        expiraEn,
-        userAgent: userAgent ?? null,
-      },
-    }),
-    prisma.usuario.update({
-      where: { id: usuario.id },
-      data: { ultimoAccesoEn: new Date() },
-    }),
-  ]);
+  const sesion = await abrirSesion(usuario.id, userAgent);
+  await prisma.usuario.update({
+    where: { id: usuario.id },
+    data: { ultimoAccesoEn: new Date() },
+  });
 
   return {
     ok: true as const,
-    token: tokenSesion,
-    expiraEn,
+    ...sesion,
     rol: usuario.rol,
     comercioSlug: usuario.comercio?.slug ?? null,
     debeCambiarPassword: usuario.debeCambiarPassword,
@@ -427,13 +490,11 @@ export async function cambiarPassword(
   // quien acaba de demostrar que sabe la contraseña vieja y eligió una nueva
   // no agrega seguridad y convierte el cambio obligatorio del primer acceso en
   // un rebote hasta la pantalla de login.
-  await prisma.sesion.updateMany({
+  await prisma.session.deleteMany({
     where: {
-      usuarioId,
-      revocadaEn: null,
+      userId: usuarioId,
       ...(sesionActualId ? { id: { not: sesionActualId } } : {}),
     },
-    data: { revocadaEn: new Date() },
   });
 
   return { ok: true };

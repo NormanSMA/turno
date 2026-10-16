@@ -113,8 +113,10 @@ describe("una sesión que ya no vale no vale", () => {
     const r = await RSesion.DELETE();
     expect(r.status).toBe(200);
 
-    const fila = await db.sesion.findUnique({ where: { id: antes!.sesionId } });
-    expect(fila!.revocadaEn).not.toBeNull();
+    // Cerrar la sesión la borra: no queda una fila que alguien pueda reusar.
+    const fila = await db.session.findUnique({ where: { id: antes!.sesionId } });
+    expect(fila).toBeNull();
+    expect(await sesionActual()).toBeNull();
   });
 });
 
@@ -179,9 +181,7 @@ describe("cambiar la contraseña expulsa a los demás y conserva al que la cambi
     );
     expect(r.ok).toBe(true);
 
-    const vivas = await db.sesion.findMany({
-      where: { usuarioId: op.id, revocadaEn: null },
-    });
+    const vivas = await db.session.findMany({ where: { userId: op.id } });
     expect(vivas).toHaveLength(1);
     expect(vivas[0]!.id).toBe(actual.sesionId);
 
@@ -202,9 +202,7 @@ describe("cambiar la contraseña expulsa a los demás y conserva al que la cambi
     const r = await cambiarPassword(op.id, "no-es-esa", "Turno-Nueva-2026");
     expect(r.ok).toBe(false);
 
-    const vivas = await db.sesion.count({
-      where: { usuarioId: op.id, revocadaEn: null },
-    });
+    const vivas = await db.session.count({ where: { userId: op.id } });
     expect(vivas).toBe(1);
   });
 

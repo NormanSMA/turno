@@ -18,7 +18,8 @@ export function crearPrismaTest() {
 export async function limpiar(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE evento_pedido, item_pedido, notificacion, pedido, franja,
-                   producto, sesion, token_acceso, auditoria_admin,
+                   producto, sesion, token_acceso, session, account, verification,
+                   auditoria_admin,
                    contador_limite, suscripcion_push, usuario, comercio
                    RESTART IDENTITY CASCADE
   `);

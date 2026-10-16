@@ -84,9 +84,18 @@ model Usuario {
   comercioId             String?               @db.Uuid
   comercio               Comercio?             @relation(fields: [comercioId], references: [id])
   creadoEn               DateTime              @default(now()) @db.Timestamptz(3)
+  /// Better Auth (ADR-24). El correo verificado por Google o por enlace mágico.
+  emailVerified          Boolean               @default(false)
+  updatedAt              DateTime              @default(now()) @updatedAt @db.Timestamptz(3)
+  /// Cuenta demo para reclutadores: la única que puede entrar por enlace con un
+  /// correo fuera del dominio institucional (ADR-24).
+  esDemo                 Boolean               @default(false)
+  imagen                 String?
   primerPedidoEn         DateTime?             @db.Timestamptz(3)
   pedidos                Pedido[]
   sesiones               Sesion[]
+  sesionesBA             Session[]
+  cuentas                Account[]
   tokens                 TokenAcceso[]
   auditoria              AuditoriaAdmin[]
   respuestas             Respuesta[]
@@ -112,6 +121,56 @@ model Sesion {
   @@map("sesion")
 }
 
+/// Better Auth (ADR-24). Las tablas `sesion` y `token_acceso` del motor propio
+/// siguen existiendo durante la ventana de reversión de 14 días.
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  expiresAt DateTime @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
+  usuario   Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid()) @db.Uuid
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  usuario               Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@map("verification")
+}
+
 /// Enlace mágico: token de un solo uso, expiración corta (§11.2)
 model TokenAcceso {
   id        String    @id @default(uuid()) @db.Uuid
@@ -130,41 +189,41 @@ model TokenAcceso {
 /// pedidos). Se persiste porque en serverless no hay memoria compartida entre
 /// instancias: un contador en RAM no limita nada.
 model ContadorLimite {
-  clave      String   @id
-  ventanaEn  DateTime @db.Timestamptz(3)
-  conteo     Int      @default(0)
+  clave     String   @id
+  ventanaEn DateTime @db.Timestamptz(3)
+  conteo    Int      @default(0)
 
   @@index([ventanaEn])
   @@map("contador_limite")
 }
 
 model Comercio {
-  id              String          @id @default(uuid()) @db.Uuid
-  nombre          String
-  slug            String          @unique
+  id                   String          @id @default(uuid()) @db.Uuid
+  nombre               String
+  slug                 String          @unique
   /// Dónde queda físicamente. No es decorativo: el estudiante decide con esto.
   /// Un pedido listo en un edificio al que no llega en su receso es un no-show
   /// que el sistema provocó, y el dato que lo evita es una línea de texto.
-  ubicacion       String?
-  personalCocina  Int             @default(1)
+  ubicacion            String?
+  personalCocina       Int             @default(1)
   /// Δ — ancho de franja en minutos (variable experimental)
-  anchoFranjaMin  Int             @default(10)
+  anchoFranjaMin       Int             @default(10)
   /// α — factor de seguridad, se calibra empíricamente (§6.2)
-  factorSeguridad Decimal         @default(0.85) @db.Decimal(4, 3)
+  factorSeguridad      Decimal         @default(0.85) @db.Decimal(4, 3)
   /// t_mín — umbral de elegibilidad para pedido anticipado (§6.3)
-  tiempoMinAnticipable Int        @default(3)
+  tiempoMinAnticipable Int             @default(3)
   /// Margen sobre el cut-off: minutos de colchón además de t(p) máximo del pedido
-  margenCutoffMin Int             @default(2)
+  margenCutoffMin      Int             @default(2)
   /// Minutos tras `listoEn` sin retiro para declarar NO_SHOW
-  minutosNoShow   Int             @default(20)
+  minutosNoShow        Int             @default(20)
   /// Tope de pedidos activos por usuario — evita monopolizar franjas
-  maxPedidosActivos Int           @default(2)
-  estadoOperacion EstadoOperacion @default(ABIERTO)
-  activo          Boolean         @default(true)
-  creadoEn        DateTime        @default(now()) @db.Timestamptz(3)
-  productos       Producto[]
-  franjas         Franja[]
-  usuarios        Usuario[]
+  maxPedidosActivos    Int             @default(2)
+  estadoOperacion      EstadoOperacion @default(ABIERTO)
+  activo               Boolean         @default(true)
+  creadoEn             DateTime        @default(now()) @db.Timestamptz(3)
+  productos            Producto[]
+  franjas              Franja[]
+  usuarios             Usuario[]
 
   @@map("comercio")
 }
@@ -197,34 +256,34 @@ model Favorito {
 /// aviso de "tu comercio dejó de recibir pedidos" no es una preferencia, es
 /// información que el estudiante necesita para no ir en vano.
 model PreferenciaAviso {
-  usuarioId    String   @id @db.Uuid
-  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  confirmacion Boolean  @default(true)
-  listo        Boolean  @default(true)
-  recordatorio Boolean  @default(true)
-  promociones  Boolean  @default(false)
+  usuarioId     String   @id @db.Uuid
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  confirmacion  Boolean  @default(true)
+  listo         Boolean  @default(true)
+  recordatorio  Boolean  @default(true)
+  promociones   Boolean  @default(false)
   actualizadoEn DateTime @updatedAt @db.Timestamptz(3)
 
   @@map("preferencia_aviso")
 }
 
 model Producto {
-  id                   String       @id @default(uuid()) @db.Uuid
-  comercioId           String       @db.Uuid
-  comercio             Comercio     @relation(fields: [comercioId], references: [id], onDelete: Cascade)
+  id                   String        @id @default(uuid()) @db.Uuid
+  comercioId           String        @db.Uuid
+  comercio             Comercio      @relation(fields: [comercioId], references: [id], onDelete: Cascade)
   nombre               String
   descripcion          String?
   /// Foto del producto. Opcional: si falta, la interfaz dibuja un mosaico
   /// derivado del nombre en vez de dejar un hueco gris.
   imagenUrl            String?
-  precio               Decimal      @db.Decimal(10, 2)
+  precio               Decimal       @db.Decimal(10, 2)
   /// t(p) medido con cronómetro sobre preparación real
   tiempoPreparacionMin Int
   /// t(p) >= t_min, marcado por el comercio
-  anticipable          Boolean      @default(false)
+  anticipable          Boolean       @default(false)
   /// El comercio lo apaga cuando se agota. No es inventario: es un interruptor.
-  disponible           Boolean      @default(true)
-  archivado            Boolean      @default(false)
+  disponible           Boolean       @default(true)
+  archivado            Boolean       @default(false)
   items                ItemPedido[]
   foto                 FotoProducto?
   favoritos            Favorito[]
@@ -432,20 +491,20 @@ model Notificacion {
 /// `p256dh` y `auth` son las claves con las que ESTE servidor cifra hacia ese
 /// dispositivo, no credenciales del usuario.
 model SuscripcionPush {
-  id          String    @id @default(uuid()) @db.Uuid
-  usuarioId   String    @db.Uuid
-  usuario     Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  endpoint    String    @unique
+  id            String    @id @default(uuid()) @db.Uuid
+  usuarioId     String    @db.Uuid
+  usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  endpoint      String    @unique
   /// Clave pública del cliente para el cifrado del payload.
-  p256dh      String
+  p256dh        String
   /// Secreto de autenticación del cliente.
-  auth        String
-  userAgent   String?
-  creadaEn    DateTime  @default(now()) @db.Timestamptz(3)
+  auth          String
+  userAgent     String?
+  creadaEn      DateTime  @default(now()) @db.Timestamptz(3)
   ultimoEnvioEn DateTime? @db.Timestamptz(3)
   /// Fallos consecutivos. Un 404/410 del servicio de push la borra de una; los
   /// fallos temporales se cuentan y a las cinco se descarta el dispositivo.
-  fallos      Int       @default(0)
+  fallos        Int       @default(0)
 
   @@index([usuarioId])
   @@map("suscripcion_push")
@@ -464,18 +523,18 @@ enum TipoRespuesta {
 /// durante el pedido: preguntar en medio del flujo mete fricción en lo que se
 /// está midiendo y contamina el propio dato de usabilidad.
 model Respuesta {
-  id        String         @id @default(uuid()) @db.Uuid
-  usuarioId String         @db.Uuid
-  usuario   Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  id        String        @id @default(uuid()) @db.Uuid
+  usuarioId String        @db.Uuid
+  usuario   Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   /// Solo para la micro-encuesta: a qué pedido se refiere.
-  pedidoId  String?        @db.Uuid
-  pedido    Pedido?        @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  pedidoId  String?       @db.Uuid
+  pedido    Pedido?       @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   tipo      TipoRespuesta
   /// Identificador de la pregunta (micro) o "sus".
   pregunta  String
   /// Respuestas crudas. En SUS, los diez ítems de 1 a 5.
   valores   Json
-  creadaEn  DateTime       @default(now()) @db.Timestamptz(3)
+  creadaEn  DateTime      @default(now()) @db.Timestamptz(3)
 
   /// Una micro-respuesta por pedido: preguntar dos veces por lo mismo sesga.
   @@unique([pedidoId, tipo])
@@ -486,15 +545,15 @@ model Respuesta {
 /// Auditoría administrativa: quién, qué, cuándo. Distinta del historial del
 /// pedido — registra decisiones sobre la configuración, no sobre un pedido.
 model AuditoriaAdmin {
-  id         String   @id @default(uuid()) @db.Uuid
-  actorId    String?  @db.Uuid
-  actor      Usuario? @relation(fields: [actorId], references: [id])
-  accion     String
-  entidad    String
-  entidadId  String?
-  antes      Json?
-  despues    Json?
-  timestamp  DateTime @default(now()) @db.Timestamptz(3)
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String?  @db.Uuid
+  actor     Usuario? @relation(fields: [actorId], references: [id])
+  accion    String
+  entidad   String
+  entidadId String?
+  antes     Json?
+  despues   Json?
+  timestamp DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([timestamp])
   @@map("auditoria_admin")

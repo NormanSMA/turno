@@ -1,15 +1,14 @@
 /**
  * Sesiones reales para las pruebas de handler.
  *
- * No se falsea la sesión: se inserta la fila en `sesion` con el mismo hash que
- * usa producción y se pone la cookie con el token en claro. Así lo que se prueba
- * es el camino completo —cookie → hash → fila → vigencia → rol—, que es
- * justamente el que `core/autorizacion.ts` no cubre porque ya recibe la sesión
- * resuelta.
+ * No se falsea la sesión: se crea con el mismo motor que usa producción
+ * (`crearSesionParaPrueba`, de la fachada) y se pone la cookie firmada. Así lo
+ * que se prueba es el camino completo —cookie → firma → fila → vigencia →
+ * rol—, que es justamente el que `core/autorizacion.ts` no cubre porque ya
+ * recibe la sesión resuelta.
  */
 
-import { generarToken, hashToken } from "@/core/identidad";
-import { COOKIE_SESION } from "@/lib/auth";
+import { COOKIE_SESION, crearSesionParaPrueba } from "@/lib/auth";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { limpiarCookies, ponerCookie } from "./cookies";
 
@@ -19,15 +18,13 @@ export async function entrarComo(
   usuarioId: string,
   opts: { expiraEn?: Date; revocadaEn?: Date | null } = {},
 ): Promise<string> {
-  const token = generarToken();
-  await prisma.sesion.create({
-    data: {
-      usuarioId,
-      tokenHash: hashToken(token),
-      expiraEn: opts.expiraEn ?? new Date(Date.now() + 86_400_000),
-      revocadaEn: opts.revocadaEn ?? null,
-    },
+  const { token } = await crearSesionParaPrueba(usuarioId, {
+    expiraEn: opts.expiraEn,
   });
+  // Una sesión revocada es una fila que ya no existe.
+  if (opts.revocadaEn) {
+    await prisma.session.deleteMany({ where: { userId: usuarioId } });
+  }
   limpiarCookies();
   ponerCookie(COOKIE_SESION, token);
   return token;

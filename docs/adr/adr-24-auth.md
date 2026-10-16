@@ -94,3 +94,31 @@ Resueltos el 2026-10-15: se mantiene ADR-08 (comercio con contraseña) y los est
 
 ## Nota de verificación
 Los detalles de Better Auth (campos, almacenamiento del token) no se verificaron contra la versión instalada. Se resuelven en T0.
+
+## Resultado de la fase 4 (2026-10-15)
+Better Auth 1.7.8 quedó detrás de la fachada. Los 27 archivos que autentican siguen importando de `src/lib/auth.ts` sin cambios, y las pruebas de IDOR y de roles pasan sin tocarlas.
+
+**Dos desvíos frente a lo decidido arriba**, porque la prueba de cada riesgo mostró un costo que el plan no había visto:
+1. **El plugin `magicLink` no se usa.** Better Auth borra el token al canjearlo, así que "ya usado" e "inexistente" se vuelven lo mismo, y se pierde la prueba de concurrencia (dos clics, una sola sesión). El enlace sigue en `token_acceso`, con bloqueo de fila; al canjearlo se abre una sesión de Better Auth y se marca el correo como verificado.
+2. **La contraseña no se copia a `account.password`.** Sigue en `usuario.passwordHash` (scrypt, `core/credenciales.ts`), un solo lugar, sin doble escritura. Por eso el script de corte no toca contraseñas y el rollback no pierde cambios de contraseña.
+
+**Riesgos del ADR, con su prueba** (`tests/auth-motor.test.ts`, 16 casos):
+| Riesgo | Resultado |
+|---|---|
+| 1. Token de sesión en claro | Confirmado: `session.token` queda en claro. La cookie va firmada (HMAC) y una cookie con firma alterada, o el token solo, no abre sesión. Se acepta y queda registrado |
+| 2. Enlace en `notificacion` o logs | El enlace solo se guarda como hash; la prueba busca el token en claro en las dos tablas |
+| 3. Dos canjes simultáneos | Una sola sesión; el segundo recibe `YA_USADO` |
+| 4. Google vincula un operador | `account.create.before` lo rechaza para COMERCIO y ADMIN |
+| 5. Alta sin condición A/B | El hook de alta la asigna; 40 altas dan A y B, nunca nula |
+| 6. Hash copiado | No aplica: no se copia |
+| 7. CSP bloquea `/api/auth` | `e2e/csp.spec.ts` verde en 9 rutas |
+| 8. Cambiar contraseña no revoca otras sesiones | Cubierto por `api-sesion.test.ts` sobre la tabla nueva |
+| 9. Correo externo crea cuenta | Rechazado salvo cuenta `esDemo` creada por el equipo |
+
+**Qué cambió de verdad:** `src/lib/auth.ts` (fachada), `src/lib/auth-motor.ts` (Better Auth), `src/app/api/auth/ba/[...all]/route.ts` (Google), los tres helpers de prueba (`tests/helpers/sesion.ts`, `e2e/sesion.ts`, `scripts/sesion-dev.ts`) y tres sitios que leían la tabla `sesion` vieja directamente (`admin/sistema`, `admin/usuarios`, `core/limites.ts`). El ADR contaba "27 llamadores"; esos tres no pasaban por la fachada.
+
+**Pendiente de Norman (T9, el corte en producción):**
+1. Crear `BETTER_AUTH_SECRET` en Vercel (valor largo y aleatorio).
+2. Ejecutar `pnpm exec tsx scripts/migrar-auth.ts` (simulacro) y luego `--aplicar` contra Neon, y desplegar.
+3. Avisar a los estudiantes que vuelven a entrar una vez.
+4. Para Google: crear el cliente OAuth, definir `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `NEXT_PUBLIC_GOOGLE_LOGIN=1`, con la URI de redirección `<APP_URL>/api/auth/ba/callback/google`.

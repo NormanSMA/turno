@@ -34,8 +34,8 @@ export async function GET() {
         ultimoAccesoEn: true,
         creadoEn: true,
         comercio: { select: { nombre: true, slug: true } },
-        sesiones: {
-          where: { expiraEn: { gt: ahora }, revocadaEn: null },
+        sesionesBA: {
+          where: { expiresAt: { gt: ahora } },
           select: { id: true },
         },
       },
@@ -51,7 +51,7 @@ export async function GET() {
         // Una cuenta con la contraseña inicial sin cambiar es una puerta
         // abierta: la contraseña la conoce quien la creó, no solo su dueño.
         passwordInicial: u.debeCambiarPassword,
-        sesionesActivas: u.sesiones.length,
+        sesionesActivas: u.sesionesBA.length,
         ultimoAccesoEn: u.ultimoAccesoEn?.toISOString() ?? null,
         desde: u.creadoEn.toISOString(),
       })),
@@ -88,9 +88,8 @@ export async function PATCH(req: Request) {
     if (!antes) return fallo("NO_ENCONTRADO", "Usuario inexistente", 404);
 
     if (accion === "REVOCAR_SESIONES") {
-      const r = await prisma.sesion.updateMany({
-        where: { usuarioId, revocadaEn: null },
-        data: { revocadaEn: new Date() },
+      const r = await prisma.session.deleteMany({
+        where: { userId: usuarioId },
       });
       await registrar(sesion?.usuarioId, accion, antes, {
         sesionesRevocadas: r.count,
@@ -127,10 +126,7 @@ export async function PATCH(req: Request) {
       });
       // Un cambio de rol tiene que cortar las sesiones vigentes: si no, el
       // permiso viejo sigue vivo hasta que la cookie expire.
-      await prisma.sesion.updateMany({
-        where: { usuarioId, revocadaEn: null },
-        data: { revocadaEn: new Date() },
-      });
+      await prisma.session.deleteMany({ where: { userId: usuarioId } });
       await registrar(sesion?.usuarioId, accion, antes, despues);
       return ok({ rol: despues.rol });
     }
@@ -140,10 +136,7 @@ export async function PATCH(req: Request) {
       data: { rol: "ADMIN" },
       select: { rol: true },
     });
-    await prisma.sesion.updateMany({
-      where: { usuarioId, revocadaEn: null },
-      data: { revocadaEn: new Date() },
-    });
+    await prisma.session.deleteMany({ where: { userId: usuarioId } });
     await registrar(sesion?.usuarioId, accion, antes, despues);
     return ok({ rol: despues.rol });
   } catch (e) {

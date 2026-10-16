@@ -113,8 +113,15 @@ export async function purgarCredenciales(
   const sesiones = await prisma.sesion.deleteMany({
     where: { OR: [{ expiraEn: { lt: corte } }, { revocadaEn: { lt: corte } }] },
   });
+  // Better Auth no borra las sesiones vencidas por su cuenta.
+  const sesionesBA = await prisma.session.deleteMany({
+    where: { expiresAt: { lt: corte } },
+  });
 
-  return { tokens: tokens.count, sesiones: sesiones.count };
+  return {
+    tokens: tokens.count,
+    sesiones: sesiones.count + sesionesBA.count,
+  };
 }
 
 /**

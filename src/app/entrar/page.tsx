@@ -15,6 +15,8 @@ import { Navegacion } from "@/components/Navegacion";
 import { rutaSegura } from "@/core/rutas";
 import { api, ErrorApi } from "@/lib/cliente";
 
+const GOOGLE_HABILITADO = process.env.NEXT_PUBLIC_GOOGLE_LOGIN === "1";
+
 function Entrar() {
   const params = useSearchParams();
   // Nunca se usa el parametro crudo: una redireccion abierta despues del
@@ -50,6 +52,29 @@ function Entrar() {
         );
       });
   }, [token, volver]);
+
+  /**
+   * Acceso con Google (ADR-24). Better Auth devuelve la dirección de Google y
+   * el navegador la sigue; al volver, `/api/auth/ba/callback/google` abre la
+   * sesión. Solo entra un correo institucional verificado (hook del motor).
+   */
+  async function conGoogle() {
+    setEstado("enviando");
+    setMensaje(null);
+    try {
+      const r = await fetch("/api/auth/ba/sign-in/social", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ provider: "google", callbackURL: volver }),
+      });
+      const datos = (await r.json()) as { url?: string };
+      if (!r.ok || !datos.url) throw new Error("sin url");
+      window.location.assign(datos.url);
+    } catch {
+      setEstado("error");
+      setMensaje("No pudimos abrir Google. Probá con el enlace al correo.");
+    }
+  }
 
   async function pedirEnlace(e: React.FormEvent) {
     e.preventDefault();
@@ -173,6 +198,20 @@ function Entrar() {
         >
           {estado === "enviando" ? "Enviando…" : "Mandame el enlace"}
         </button>
+
+        {GOOGLE_HABILITADO && (
+          <>
+            <p className="text-center text-xs text-tinta-suave">o</p>
+            <button
+              type="button"
+              onClick={conGoogle}
+              disabled={estado === "enviando"}
+              className="w-full rounded-full border border-borde px-6 py-3 font-semibold disabled:opacity-40"
+            >
+              Entrar con Google
+            </button>
+          </>
+        )}
 
         <p className="text-xs text-tinta-suave">
           Al entrar aceptás participar en el estudio. Tus datos se analizan de

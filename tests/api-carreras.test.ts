@@ -21,8 +21,7 @@ vi.mock("next/headers", () => import("./helpers/cookies"));
 import { prisma } from "@/lib/db";
 import { limpiar, montarEscenario } from "./helpers/db";
 import { peticion, salir } from "./helpers/sesion";
-import { COOKIE_SESION } from "@/lib/auth";
-import { generarToken, hashToken } from "@/core/identidad";
+import { COOKIE_SESION, crearSesionParaPrueba } from "@/lib/auth";
 import { ponerCookie } from "./helpers/cookies";
 import type { PrismaClient } from "@/generated/prisma/client";
 
@@ -43,15 +42,7 @@ const db = prisma as unknown as PrismaClient;
  * es lo que se quiere medir— son las transacciones, no la lectura de la cookie.
  */
 async function sesionPara(usuarioId: string): Promise<string> {
-  const token = generarToken();
-  await db.sesion.create({
-    data: {
-      usuarioId,
-      tokenHash: hashToken(token),
-      expiraEn: new Date(Date.now() + 86_400_000),
-    },
-  });
-  return token;
+  return (await crearSesionParaPrueba(usuarioId)).token;
 }
 
 function comoTokenPost(token: string, cuerpo: unknown, clave: string) {

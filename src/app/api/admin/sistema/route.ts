@@ -97,8 +97,8 @@ export async function GET(req: Request) {
         take: 12,
         include: { actor: { select: { correo: true } } },
       }),
-      prisma.sesion.count({
-        where: { revocadaEn: null, expiraEn: { gt: new Date() } },
+      prisma.session.count({
+        where: { expiresAt: { gt: new Date() } },
       }),
     ]);
 

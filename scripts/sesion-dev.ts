@@ -13,11 +13,11 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import {
   asignarCondicion,
-  expiracionSesion,
   generarToken,
   hashToken,
   normalizarCorreo,
 } from "../src/core/identidad";
+import { crearSesionParaPrueba } from "../src/lib/auth";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -44,21 +44,15 @@ async function main() {
       data: { correo, condicionExperimental: asignarCondicion(), consentimiento: true },
     }));
 
-  const token = generarToken();
-  await prisma.sesion.create({
-    data: {
-      usuarioId: usuario.id,
-      tokenHash: hashToken(token),
-      expiraEn: expiracionSesion(),
-      userAgent: "script sesion-dev",
-    },
-  });
+  const { token } = await crearSesionParaPrueba(usuario.id);
 
   console.log("");
   console.log(`Sesión para ${usuario.correo} (rol ${usuario.rol}, condición ${usuario.condicionExperimental})`);
   console.log("");
   console.log("Pegá esto en la consola del navegador:");
-  console.log(`  document.cookie = "turno_sesion=${token}; path=/; max-age=6480000"`);
+  console.log(
+    `  document.cookie = "turno_sesion=${encodeURIComponent(token)}; path=/; max-age=6480000"`,
+  );
   console.log("");
 
   /*
