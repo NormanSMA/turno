@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Navegacion } from "@/components/Navegacion";
 import { ComparacionReceso } from "@/components/ComparacionReceso";
 import { SimuladorSimple } from "@/components/SimuladorSimple";
+import { HistoriaReceso } from "@/components/HistoriaReceso";
 import { CabeceraTurno } from "@/components/marca";
 import { Icono } from "@/components/iconos";
 
@@ -92,7 +93,10 @@ export default function Pagina() {
         id="contenido"
         className="mx-auto w-full max-w-3xl px-4 pb-28 pt-8 sm:px-5 sm:pb-16"
       >
-        <SimuladorSimple />
+        <HistoriaReceso />
+        <div className="mt-12">
+          <SimuladorSimple />
+        </div>
 
         <section className="mt-12">
           <h2 className="etiqueta mb-4">Tres pasos</h2>

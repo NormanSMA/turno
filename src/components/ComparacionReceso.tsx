@@ -54,11 +54,11 @@ interface Tramo {
  * Los tres valores estan elegidos contra el texto que llevan encima:
  *   #c91525 con blanco -> 5.81:1 (urgencia)
  *   #e49b19 con tinta  -> 7.68:1
- *   #34483c con blanco -> 8.95:1 (oliva, la solución)
+ *   #5a7a66 con blanco -> 4.76:1 (oliva aclarado, visible sobre el fondo oscuro)
  */
 const ROJO_FILA = "#c91525";
 const AMBAR_COCINA = "#e49b19";
-const ROJO_MARCA = "#34483c";
+const ROJO_MARCA = "#5a7a66";
 
 const SIN: Tramo[] = [
   {

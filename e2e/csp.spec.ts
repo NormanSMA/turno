@@ -48,6 +48,8 @@ type Ruta = {
 const RUTAS: Ruta[] = [
   { nombre: "portada", ruta: async () => "/", listo: "h1" },
   { nombre: "identidad con personajes", ruta: async () => "/identidad", listo: "svg[role=img]" },
+  { nombre: "entrar", ruta: async () => "/entrar", listo: "form" },
+  { nombre: "como funciona con simulador", ruta: async () => "/como-funciona", listo: "input[type=range]" },
   { nombre: "explorar", ruta: async () => "/explorar", listo: "main" },
   { nombre: "comercio publico", ruta: async () => `/c/${SLUG}`, listo: "main" },
   // La 404 monta la animación Lottie: es la ruta que prueba el build light.
