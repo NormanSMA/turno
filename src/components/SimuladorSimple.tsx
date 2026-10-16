@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { m } from "motion/react";
+import { ConMovimiento } from "@/components/movimiento/ConMovimiento";
 import { MascotaTurno } from "@/components/mascota/Turno";
 import {
   ANCHO_FRANJA_MIN,
@@ -55,6 +56,7 @@ export function SimuladorSimple() {
   const maximo = Math.max(1, ...r.franjas.map((f) => f.demanda));
 
   return (
+    <ConMovimiento>
     <section className="rounded-lg border border-borde bg-superficie p-4 sm:p-5">
       <h2 className="titulo text-h3">Probá tu capacidad</h2>
       <p className="mt-2 text-chico text-texto-2">
@@ -120,5 +122,6 @@ export function SimuladorSimple() {
         <p className="mt-1 text-chico text-texto-2">{MENSAJE[r.estado]}</p>
       </div>
     </section>
+    </ConMovimiento>
   );
 }

@@ -6,10 +6,12 @@
  * una ruta pasa de su techo, y falla si una ruta que no es del panel descarga
  * Recharts, TanStack Table o Lottie en la carga inicial.
  *
- * Línea base del 2026-10-15 (KB comprimidos): `/` 239, `/explorar` 239, `/c/[slug]` 248,
- * `/pedido/[id]` 242, cocina 220, informe 235, `/panel` 660 (Recharts, diferido) y
- * `/panel/simulador` 230. Antes de cargar las hojas con `next/dynamic` eran 267 a 277.
- * Motion pesa unos 72 KB en cada ruta con el dock y es la palanca que queda.
+ * Medición del 2026-10-15 (KB comprimidos, visita en frío), antes y después de sacar
+ * Motion de la navegación y del layout: `/` 239 a 185, `/explorar` 239 a 185,
+ * `/c/[slug]` 248 a 194, `/pedido/[id]` 242 a 233, cocina 220 a 186, informe 235 a 229,
+ * `/panel` 660 a 606 (Recharts, diferido) y `/panel/simulador` 230 a 176. Antes de
+ * cargar las hojas con `next/dynamic` eran 267 a 277. Motion solo se descarga donde
+ * hay mascota, personaje o gráficos animados (`ConMovimiento`).
  *
  * Los techos son esa línea base más un margen de 6 %: no
  * son la meta del ADR (110 a 140 KB), son el freno para que no empeore. Cada
@@ -26,14 +28,14 @@ const SLUG = "comedor-el-jaguar";
 
 /** Techos en KB comprimidos. */
 const TECHOS: { ruta: string; correo?: string; kb: number; pesados: boolean }[] = [
-  { ruta: "/", kb: 255, pesados: false },
-  { ruta: "/explorar", correo: ESTUDIANTE, kb: 255, pesados: false },
-  { ruta: `/c/${SLUG}`, correo: ESTUDIANTE, kb: 265, pesados: false },
-  { ruta: "PEDIDO", correo: ESTUDIANTE, kb: 258, pesados: false },
-  { ruta: `/cocina/${SLUG}`, correo: COMERCIO, kb: 235, pesados: false },
-  { ruta: `/comercio/${SLUG}?ver=informe`, correo: COMERCIO, kb: 250, pesados: false },
-  { ruta: "/panel", correo: ADMIN, kb: 700, pesados: true },
-  { ruta: "/panel/simulador", correo: ADMIN, kb: 245, pesados: false },
+  { ruta: "/", kb: 196, pesados: false },
+  { ruta: "/explorar", correo: ESTUDIANTE, kb: 196, pesados: false },
+  { ruta: `/c/${SLUG}`, correo: ESTUDIANTE, kb: 206, pesados: false },
+  { ruta: "PEDIDO", correo: ESTUDIANTE, kb: 247, pesados: false },
+  { ruta: `/cocina/${SLUG}`, correo: COMERCIO, kb: 197, pesados: false },
+  { ruta: `/comercio/${SLUG}?ver=informe`, correo: COMERCIO, kb: 243, pesados: false },
+  { ruta: "/panel", correo: ADMIN, kb: 642, pesados: true },
+  { ruta: "/panel/simulador", correo: ADMIN, kb: 187, pesados: false },
 ];
 
 const PESADOS = /recharts|lottie|createTable|useTable/;

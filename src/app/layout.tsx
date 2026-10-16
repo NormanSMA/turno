@@ -1,5 +1,4 @@
 import { ConsultasProveedor } from "@/components/ConsultasProveedor";
-import { MovimientoProveedor } from "@/components/MovimientoProveedor";
 import { Toaster } from "@/components/ui/sonner";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -79,9 +78,7 @@ export default function RootLayout({
           Saltar al contenido
         </a>
         <Arranque />
-        <ConsultasProveedor>
-          <MovimientoProveedor>{children}</MovimientoProveedor>
-        </ConsultasProveedor>
+        <ConsultasProveedor>{children}</ConsultasProveedor>
         <Toaster />
       </body>
     </html>

@@ -20,6 +20,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { m } from "motion/react";
+import { ConMovimiento } from "@/components/movimiento/ConMovimiento";
 import { ImagenProducto } from "@/components/ImagenProducto";
 import { Icono } from "@/components/iconos";
 import { cordobas } from "@/lib/cliente";
@@ -102,6 +103,7 @@ export function HojaProducto({
   }
 
   return (
+    <ConMovimiento>
     <Drawer open={producto !== null} onOpenChange={alCambiar}>
       <DrawerContent
         onOpenAutoFocus={(e) => {
@@ -301,5 +303,6 @@ export function HojaProducto({
       </div>
     </DrawerContent>
     </Drawer>
+    </ConMovimiento>
   );
 }

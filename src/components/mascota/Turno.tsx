@@ -1,6 +1,7 @@
 "use client";
 
 import { m } from "motion/react";
+import { ConMovimiento } from "@/components/movimiento/ConMovimiento";
 
 /**
  * Mascota "turno" (ADR-22).
@@ -39,6 +40,7 @@ export function MascotaTurno({
         : "M44 76 Q60 92 76 76";
 
   return (
+    <ConMovimiento>
     <m.svg
       viewBox="0 0 120 140"
       width={size}
@@ -128,5 +130,6 @@ export function MascotaTurno({
         </g>
       )}
     </m.svg>
+    </ConMovimiento>
   );
 }

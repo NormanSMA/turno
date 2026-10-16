@@ -1,6 +1,7 @@
 "use client";
 
 import { m } from "motion/react";
+import { ConMovimiento } from "@/components/movimiento/ConMovimiento";
 
 // Entrada con resorte corto para bloques que aparecen dentro de una pantalla.
 // Solo transform y opacity: no mueve el layout, así que el CLS sigue en 0.
@@ -14,6 +15,7 @@ export function Aparece({
   retraso?: number;
 }) {
   return (
+    <ConMovimiento>
     <m.div
       className={className}
       initial={{ opacity: 0, y: 8 }}
@@ -22,5 +24,6 @@ export function Aparece({
     >
       {children}
     </m.div>
+    </ConMovimiento>
   );
 }

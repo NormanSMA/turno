@@ -1,6 +1,7 @@
 "use client";
 
 import { m } from "motion/react";
+import { ConMovimiento } from "@/components/movimiento/ConMovimiento";
 
 /**
  * Personajes de Open Peeps (CC0), recoloreados con la paleta de TURNO (ADR-22).
@@ -33,6 +34,7 @@ export function Personaje({
   titulo?: string;
 }) {
   return (
+    <ConMovimiento>
     <m.svg
       viewBox="0 0 240 324"
       width={(size * 240) / 324}
@@ -47,5 +49,6 @@ export function Personaje({
     >
       <use href={`/personajes/${quien}.svg#fig`} />
     </m.svg>
+    </ConMovimiento>
   );
 }

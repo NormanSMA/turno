@@ -25,11 +25,8 @@ import { LogotipoTurno } from "@/components/marca";
 import { Icono, type NombreIcono } from "@/components/iconos";
 import { sesionCliente } from "@/lib/sesion-cliente";
 import { api } from "@/lib/cliente";
-import { AnimatePresence, m } from "motion/react";
 import { EstadoPedidoDock } from "@/components/BandaPedidoActivo";
 import { usePedidosEnCurso } from "@/lib/consultas-pedido-activo";
-
-const RESORTE = { type: "spring", stiffness: 420, damping: 34 } as const;
 
 interface Sesion {
   autenticado: boolean;
@@ -93,6 +90,36 @@ function Punto({ n, etiqueta }: { n: number; etiqueta: string }) {
 }
 
 /**
+ * Mantiene montada una fila mientras dura su salida.
+ *
+ * Con CSS no hay `AnimatePresence`: la fila se queda en el árbol los 250 ms
+ * que tarda en desvanecerse y después se desmonta. `visible` cambia un cuadro
+ * después de montar, para que la transición parta del estado oculto.
+ */
+function useConSalida<T>(valor: T | undefined, ms = 250) {
+  const [montado, setMontado] = useState<T | undefined>(valor);
+  const [visible, setVisible] = useState(false);
+
+  // Estado derivado: se ajusta durante el render, sin efecto, cuando llega un valor.
+  if (valor !== undefined && valor !== montado) setMontado(valor);
+
+  useEffect(() => {
+    if (valor !== undefined) {
+      const cuadro = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(cuadro);
+    }
+    const ocultar = setTimeout(() => setVisible(false), 0);
+    const desmontar = setTimeout(() => setMontado(undefined), ms);
+    return () => {
+      clearTimeout(ocultar);
+      clearTimeout(desmontar);
+    };
+  }, [valor, ms]);
+
+  return { montado, visible };
+}
+
+/**
  * `comercioSlug` sigue aceptándose por prop, pero manda el de la sesión.
  *
  * La prop venía de lo que cada pantalla tuviera a mano, y en `/explorar` era
@@ -118,6 +145,7 @@ export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
   const pedidos = usePedidosEnCurso();
   const enCurso = dentro ? pedidos.length : 0;
   const pedidoDock = dentro ? pedidos[0] : undefined;
+  const dock = useConSalida(pedidoDock);
 
   const destinos: Destino[] = [
     { href: "/", texto: "Inicio", icono: "inicio" },
@@ -282,26 +310,24 @@ export function Navegacion({ comercioSlug }: { comercioSlug?: string }) {
           vistazo. */}
       <div className="fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden">
         {/* Un solo dock carbón. La fila de estado del pedido aparece ENCIMA del
-            dock, fuera de su caja (`absolute bottom-full`) y se anima solo con
-            transform y opacidad: ningún cuadro cambia el layout, así que el CLS
+            dock, fuera de su caja (`absolute bottom-full`) y se anima con CSS,
+            solo con transform y opacidad (sin Motion en la navegación): ningún cuadro cambia el layout, así que el CLS
             sigue en 0. Animar `height` movía el dock cuadro a cuadro y sumaba
             ~0.006. El enlace de estado queda FUERA del `<nav>`: la navegación
             móvil y la de escritorio tienen que listar los mismos destinos. */}
         <div className="relative mx-auto w-full min-w-0 max-w-md">
-          <AnimatePresence initial={false}>
-            {pedidoDock && (
-              <m.div
-                key="estado"
-                initial={{ y: 16, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 16, opacity: 0 }}
-                transition={RESORTE}
-                className="absolute inset-x-0 bottom-full mb-2 overflow-hidden rounded-3xl border border-cocina-borde bg-cocina p-1.5 shadow-md"
-              >
-                <EstadoPedidoDock pedido={pedidoDock} />
-              </m.div>
-            )}
-          </AnimatePresence>
+          {dock.montado && (
+            <div
+              className={`absolute inset-x-0 bottom-full mb-2 overflow-hidden rounded-3xl border border-cocina-borde bg-cocina p-1.5 shadow-md transition-[transform,opacity] duration-300 ease-salida motion-reduce:transition-none ${
+                dock.visible
+                  ? "translate-y-0 opacity-100"
+                  : "pointer-events-none translate-y-4 opacity-0"
+              }`}
+              aria-hidden={dock.visible ? undefined : true}
+            >
+              <EstadoPedidoDock pedido={dock.montado} />
+            </div>
+          )}
           <div className="overflow-hidden rounded-3xl border border-cocina-borde bg-cocina p-1.5 shadow-md">
           <nav aria-label="Principal">
         {/* `min-w-0` en la fila y en cada destino: sin eso los cinco elementos
